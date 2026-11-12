@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy_primary.outputs.page_url || steps.deploy.outputs.page_url }}
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v4
@@ -70,6 +70,18 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: docs
-      - name: Publicar sitio
+      # GitHub Pages puede tardar segundos en indexar un artifact recién subido.
+      # Reintentamos dentro del MISMO run, sin duplicar artifacts en un workflow re-run.
+      - name: Esperar indexación del artefacto Pages
+        run: sleep 20
+      - name: Publicar sitio (primer intento)
+        id: deploy_primary
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Esperar antes del reintento si falla metadata de Pages
+        if: steps.deploy_primary.outcome == 'failure'
+        run: sleep 30
+      - name: Publicar sitio (reintento)
         id: deploy
+        if: steps.deploy_primary.outcome == 'failure'
         uses: actions/deploy-pages@v4
