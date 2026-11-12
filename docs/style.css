@@ -74,3 +74,30 @@
 .top5-card:has(.pill.up){border-color:#27794f}
 .top5-card:has(.pill.caution){border-color:#4c855f}
 #buyCaption{line-height:1.35}
+
+/* Verde visible real (no badges ilustrativos): fondo, borde y banda en compras. */
+.pill.up,
+#assetRows tr.buy-strong .pill,
+.top5-card.buy-strong .pill.up {
+  background-color:#087e42!important;
+  border:1px solid #40f29b!important;
+  color:#ffffff!important;
+  box-shadow:0 0 0 1px #176e4a, 0 0 13px #139f5b55!important;
+  font-weight:850!important;
+}
+.pill.caution,
+#assetRows tr.buy-cautious .pill,
+.top5-card.buy-cautious .pill.caution {
+  background-color:#1f8e4b!important;
+  border:1px solid #9aefb0!important;
+  color:#ffffff!important;
+  box-shadow:0 0 0 1px #4d9c6f, 0 0 12px #3ebc7450!important;
+  font-weight:850!important;
+}
+#assetRows tr.buy-strong td {background:rgba(15,114,64,.17)}
+#assetRows tr.buy-cautious td {background:rgba(59,152,83,.12)}
+#assetRows tr.buy-strong td:first-child {box-shadow:inset 4px 0 #26e691}
+#assetRows tr.buy-cautious td:first-child {box-shadow:inset 4px 0 #86e79c}
+.top5-card.buy-strong {border:2px solid #28c577!important}
+.top5-card.buy-cautious {border:2px solid #5ec883!important}
+.pill.watch {background-color:#153c4a!important;border-color:#447688!important;color:#c3e2ec!important}
