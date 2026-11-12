@@ -180,7 +180,7 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
         return False,""
     if d.get("stretch_atr20") is None or d["stretch_atr20"]>1.8:
         return False,""
-    trigger=bool(d.get("cross_up21")) or a.get("signal")=="COMPRA CONDICIONAL"
+    trigger=bool(d.get("cross_up21") or d.get("near20") or d.get("breakout")) or a.get("signal") in ("COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN")
     if not trigger:return False,""
     if market!="FAVORABLE":
         from radar_features import cautious_signal
