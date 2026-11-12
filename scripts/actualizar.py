@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength
 from earnings import earnings_for_candidates, event_label
 from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
 from paper_store import load_or_initialize
@@ -120,7 +120,9 @@ def last_complete_daily(df: pd.DataFrame, now: datetime) -> pd.DataFrame:
     return df
 
 
-def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | None:
+def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
+            spy_close: pd.Series | None = None,
+            qqq_close: pd.Series | None = None) -> dict | None:
     df = last_complete_daily(df, now)
     if len(df) < 240:
         return None
@@ -186,6 +188,7 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
         obj1 = obj2 = None
     volumes = volume_profile(df) if {"Volume", "High", "Low"} <= set(df.columns) else {}
     sma21 = sma21_priority(c)
+    rs = relative_strength(c,spy_close,qqq_close)
     result = {
         "date":date.isoformat(), "price":number(price,3), "ma20":number(ma20,3),
         "ma50":number(ma50,3), "ma200":number(ma200,3),
@@ -198,6 +201,7 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     }
     result.update(volumes)
     result.update(sma21)
+    result.update(rs)
     result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)
     result["asset_kind"] = "ACCION" if is_stock else "ETF / INDICE / NO CLASIFICADO"
     return result
@@ -217,7 +221,12 @@ def get_signal(row: dict | None, macro: str, fresh: bool) -> tuple[str,str,list[
         reasons.append("Cruce bajista del cierre diario bajo SMA21: revisar estructura y proteger riesgo")
     bearish = p < m200 and macdD < 0 and rsiD < 40
     reduced = ((p < m50 and macdD < 0 and rsiD < 48) or sc < 30)
-    bull = sc >= 73 and p > m50 > m200 and 46 <= rsiD <= 70 and macdD > 0
+    # El score histórico sigue existiendo, pero las nuevas compras normales
+    # deben pasar el score de oportunidad, con RSI y RS frente a índices.
+    bull = (sc >= 73 and p > m50 > m200 and 46 <= rsiD <= 70
+            and macdD > 0 and row.get("rank_score") is not None
+            and row["rank_score"] >= 60 and row.get("rs_verified") is True
+            and row.get("rs_score",0) >= 45)
     entry = bool(row["near20"] or row["breakout"])
     if bearish:
         return "SALIR / EVITAR", "down", reasons+["Bajo SMA200 con RSI débil y MACD negativo; revisar tesis antes de mantener"]
@@ -285,10 +294,13 @@ def main():
     # La clasificación es orientativa; no sustituye confirmación del tipo de instrumento.
     etfs=KNOWN_US_ETFS
     nonstocks={x["subyacente_usa"] for x in catalog if x["sector"]=="Índices y ETFs"}
+    spy_close = last_complete_daily(frames["SPY"],now)["Close"] if "SPY" in frames else None
+    qqq_close = last_complete_daily(frames["QQQ"],now)["Close"] if "QQQ" in frames else None
     technical={}
     for sym,frame in frames.items():
         try:
-            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks))
+            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks),
+                      spy_close=spy_close,qqq_close=qqq_close)
             if v:technical[sym]=v
         except Exception as exc:
             logging.warning("Error de cálculo %s: %s",sym,exc)
@@ -321,7 +333,7 @@ def main():
         val=technical.get(us) if us else None
         fresh=is_fresh(val)
         signal,tone,why = get_signal(val,macro,fresh)
-        if ENABLE_CAUTION_ENTRIES and val and val.get("asset_kind")=="ACCION":
+        if ENABLE_CAUTION_ENTRIES and val and val.get("asset_kind") in ("ACCION","ETF / INDICE / NO CLASIFICADO"):
             candidate, candidate_tone, note = cautious_signal(val,macro,vixvalue,fresh,signal)
             if candidate != signal:
                 signal,tone=candidate,candidate_tone
@@ -362,10 +374,10 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.2-macro-excepcion-size-conservador-v1',
+          'rules_version':'1.3-rs-volume-rsi-sma200-acciones-etfs-prudentes-v1',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
-          'note':'Entradas con precaución se habilitan sólo por confluencia SMA21/semanal/volumen y VIX<25; en macro débil se reserva 70% y se reduce el tamaño de papel simulado. Histórico OOS de 10 activos no muestra ventaja confirmada. CEDEAR BYMA/ratio/spread sin validar.'},
+          'note':'Acciones y ETFs: score oportunidad 30% fuerza relativa SPY/QQQ, 20% volumen confirmado, SMA21 20%/15%, base 30%/35%; RSI extremo y bajo SMA200 penalizados. Macro adversa permite sólo compra con precaución y tamaño reducido. Sin rentabilidad OOS demostrada, BYMA/ratio/spread sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 implica régimen defensivo y menor sizing; puede haber compra prudente con fuerza propia, SMA21 y volumen. VIX>=25 o macro sin verificar bloquean nuevas compras. No ejecuta órdenes.'},
         'assets':assets,'sectors':sectors,'top5':selection
