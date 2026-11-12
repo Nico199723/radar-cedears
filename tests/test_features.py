@@ -8,7 +8,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
-from radar_features import volume_profile,ranking_score,cautious_signal,top_five,sma21_priority,ranking_stock_21
+from radar_features import volume_profile,ranking_score,cautious_signal,top_five,sma21_priority,ranking_stock_21,relative_strength,score_penalties
 from earnings import parse_earnings,event_label
 
 
@@ -34,11 +34,12 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(s["sma21_component"],0)
 
     def test_stock_ranking_21_pesa_mas_que_simple_volumen(self):
-        baseline={"score":70,"volume_score":5,"sma21_component":100}
+        baseline={"score":70,"volume_confirm_score":80,"sma21_component":100,
+                  "rs_score":60,"rs_verified":True,"rsi14d":56,"price":120,"ma200":100}
         up=ranking_stock_21(baseline)
         down=ranking_stock_21({**baseline,"sma21_component":0})
         self.assertEqual(up-down,20)
-        self.assertEqual(up,round(70*.65+7.5+20))
+        self.assertEqual(up,round(70*.30+80*.20+60*.30+20))
 
     def test_indice_mantiene_pesos_preexistentes(self):
         from actualizar import compute
@@ -62,14 +63,19 @@ class FeatureTests(unittest.TestCase):
         self.assertLessEqual(volume_profile(f)["volume_score"],10)
         f.iloc[-1,f.columns.get_loc("Volume")]=0
         self.assertGreaterEqual(volume_profile(f)["volume_score"],0)
-        self.assertEqual(ranking_score({"score":80,"volume_score":10}),83)
-        self.assertIsNone(ranking_score({"score":80,"volume_score":None}))
+        ranked={"score":80,"volume_confirm_score":90,"sma21_component":80,
+                "rs_score":75,"rs_verified":True}
+        self.assertEqual(ranking_score(ranked),round(.35*80+.15*80+.30*75+.20*90))
+        self.assertIsNone(ranking_score({"score":80,"volume_confirm_score":None,"sma21_component":80}))
 
     def _sample(self):
         return {"score":85,"price":100,"ma20":99,"ma21":98,"ma50":96,"ma200":90,
                 "rsi14d":57,"rsi21w":58,"macd_hist_d":.4,"macd_hist_w":.2,
                 "rvol20":1.4,"dollar_volume20":25_000_000,"obv_up10":True,
-                "stretch_atr20":.5,"near20":True,"breakout":False}
+                "stretch_atr20":.5,"near20":True,"breakout":False,
+                "rank_score":81,"rank_penalty":0,"rs_verified":True,
+                "rs_score":70,"rs_spy20":5,"rs_qqq20":4,
+                "volume_confirm_score":85}
 
     def test_compra_prudente_no_necesita_spy_qqq_sobre_sma50(self):
         # El régimen DEFENSIVO ya representa que ambos índices pueden estar abajo.
@@ -90,6 +96,7 @@ class FeatureTests(unittest.TestCase):
         d["near20"]=False
         d["breakout"]=False
         d["cross_up21"]=False
+        d["stretch_atr20"]=1.4
         self.assertEqual(cautious_signal(d,"MIXTO",18,True,"ESPERAR")[0],
                          "VIGILAR COMPRA · MACRO")
         d["cross_up21"]=True
@@ -133,7 +140,7 @@ class FeatureTests(unittest.TestCase):
             q=dict(d);q[k]=v
             sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
             self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
-        q=dict(d);q["near20"]=False
+        q=dict(d);q["near20"]=False;q["stretch_atr20"]=1.4
         sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
         self.assertEqual(sig,"VIGILAR COMPRA · MACRO")
 
