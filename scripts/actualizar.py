@@ -21,6 +21,12 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five
+from earnings import earnings_for_candidates, event_label
+
+# Se activa sólo tras contrastar baseline y candidato en datos fuera de muestra.
+ENABLE_CAUTION_ENTRIES = False
+
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "config" / "universo.csv"
 OUT = ROOT / "docs" / "data.json"
@@ -169,7 +175,8 @@ def compute(df: pd.DataFrame, now: datetime) -> dict | None:
         obj2 = round(price + 3 * risk, 2)
     else:
         obj1 = obj2 = None
-    return {
+    volumes = volume_profile(df) if {"Volume", "High", "Low"} <= set(df.columns) else {}
+    result = {
         "date":date.isoformat(), "price":number(price,3), "ma20":number(ma20,3),
         "ma50":number(ma50,3), "ma200":number(ma200,3),
         "rsi14d":number(rsiD,2), "rsi21w":rsiW, "rsi21m":rsiM,
@@ -179,6 +186,9 @@ def compute(df: pd.DataFrame, now: datetime) -> dict | None:
         "high20":high20,"low20":low20,"near20":near20,"breakout":bool(breakout),
         "invalid_usd":invalid,"target_2r":obj1,"target_3r":obj2,
     }
+    result.update(volumes)
+    result["rank_score"] = ranking_score(result)
+    return result
 
 
 def get_signal(row: dict | None, macro: str, fresh: bool) -> tuple[str,str,list[str]]:
@@ -291,6 +301,11 @@ def main():
         val=technical.get(us) if us else None
         fresh=is_fresh(val)
         signal,tone,why = get_signal(val,macro,fresh)
+        if ENABLE_CAUTION_ENTRIES and val:
+            candidate, candidate_tone, note = cautious_signal(val,macro,vixvalue,fresh,signal)
+            if candidate != signal:
+                signal,tone=candidate,candidate_tone
+                if note:why=why+[note]
         if not us:
             signal,tone,why='SIN SUBYACENTE USA','neutral',['No existe mapeo USD estadounidense confiable; no usar ticker homónimo']
         assets.append({
@@ -300,6 +315,14 @@ def main():
             'signal':signal,'tone':tone,'reasons':why,'data':val,
             'verificacion':item['observacion']
         })
+    # Calendario opcional y parcial: no afirmar "sin balance" cuando falla Yahoo.
+    earnings_dates, earnings_coverage = earnings_for_candidates(assets,now.astimezone(NY_TZ).date())
+    for a in assets:
+        sym=a["usa"]
+        checked=bool(sym and sym in earnings_dates)
+        a["earnings"]=earnings_dates.get(sym) if checked else None
+        a["earnings_status"]=event_label(a["earnings"],checked)
+    selection=top_five(assets,spy,macro)
     sectors=[]
     for sector,proxy in SECTORS.items():
         val=technical.get(proxy)
@@ -309,10 +332,12 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'note':'Sólo análisis técnico USD sobre subyacentes USA. No usa CEDEAR ARS. No valida ratio, volumen BYMA ni fundamentos, balances, Koncorde o noticia en tiempo real.'},
+          'rules_version':'1.0-senales-originales-volumen-ranking-v1',
+          'earnings_coverage':earnings_coverage,
+          'note':'Sólo análisis técnico USD USA. Ranking pondera RVOL/OBV (15%) sin modificar señal de entrada vigente; fechas de balances son indicativas y de cobertura parcial. CEDEAR BYMA/ratio/spread sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'Filtro SPY y QQQ vs SMA50, VIX <25 como habilitación inicial. Validar FED/BOJ/GEX antes de operar.'},
-        'assets':assets,'sectors':sectors
+        'assets':assets,'sectors':sectors,'top5':selection
     }
     OUT.parent.mkdir(parents=True,exist_ok=True)
     tmp=OUT.with_suffix('.json.tmp')
