@@ -398,7 +398,8 @@ def reconcile_buy_label(row: dict | None, signal: str, tone: str,
                         reasons: list[str], fresh: bool,
                         candidate: dict | None = None,
                         market: str = "NO VERIFICADO",
-                        vix: float | None = None) -> tuple[str,str,list[str]]:
+                        vix: float | None = None,
+                        allow_high_score: bool = True) -> tuple[str,str,list[str]]:
     """Señal visible y elegibilidad: compra REAL requiere Score O >=70.
 
     Separar 3 preguntas distintas:
@@ -426,7 +427,7 @@ def reconcile_buy_label(row: dict | None, signal: str, tone: str,
         if rank>=MIN_OPTION_SCORE:
             return "VIGILAR COMPRA · SCORE","watch",reasons+[explanation]
         return "ESPERAR","wait",reasons+[explanation]
-    if not is_buy and rank>=PRIORITY_OPTION_SCORE:
+    if allow_high_score and not is_buy and rank>=PRIORITY_OPTION_SCORE:
         qualified,blocked=high_score_precaution(row,market,vix,True)
         if qualified and (signal.startswith("VIGILAR") or signal in (
                 "ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR")):
