@@ -79,6 +79,7 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  const status=x.candidate||{};
  const candidateInfo='<div class="detail-note"><strong>Elegibilidad por puntaje:</strong> '
    +esc(status.level||'Sin clasificación')+' · mínimo 62/100 para vigilancia, 75/100 prioridad de estudio. '
+   +'Score habilitación vigente (criterio previo): '+esc(d.rank_score_signal==null?'—':d.rank_score_signal+'/100')+'. '
    +'<strong>Condiciones pendientes:</strong> '+esc((status.blockers||[]).join(' · ')||'ninguna identificada')
    +'. El puntaje no es un gatillo ni orden de compra.</div>';
  const penalties=Array.isArray(d.rank_penalty_reasons)?d.rank_penalty_reasons:[];
