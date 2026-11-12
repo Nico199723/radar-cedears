@@ -89,7 +89,8 @@ def macro_history(spy: pd.DataFrame, qqq: pd.DataFrame, vix: pd.DataFrame) -> di
 
 def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
                          variant: str = 'baseline', vix_by_day: dict | None = None,
-                         is_stock: bool = True) -> dict:
+                         is_stock: bool = True, spy_close: pd.Series | None = None,
+                         qqq_close: pd.Series | None = None) -> dict:
     """Reutilizar EXACTAMENTE compute/get_signal de producción, con serie truncada en t."""
     frame = normalize(frame)
     decisions = {}
@@ -99,11 +100,12 @@ def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
             continue
         if day not in macros:
             continue
-        row = compute(frame.iloc[:pos + 1], close_time(day),is_stock=is_stock)
+        row = compute(frame.iloc[:pos + 1], close_time(day),is_stock=is_stock,
+                      spy_close=spy_close,qqq_close=qqq_close)
         if row is None:
             continue
         signal, _, _ = get_signal(row, macros[day], True)
-        if variant == "prudente" and is_stock:
+        if variant == "prudente":
             candidate, _, _ = cautious_signal(row,macros[day],
                                     (vix_by_day or {}).get(day),True,signal)
             if candidate == "COMPRA CON PRECAUCIÓN":
@@ -272,6 +274,8 @@ def main():
         raise SystemExit("No hay macro completa SPY/QQQ/VIX; NO ejecutar señales de compra")
     macro = macro_history(*(frames[t] for t in required))
     vix_by_day = normalize(frames["^VIX"])["Close"].to_dict()
+    spy_close=normalize(frames["SPY"])["Close"]
+    qqq_close=normalize(frames["QQQ"])["Close"]
     start_date = (datetime.now(NY).date() - timedelta(days=int(args.years * 365.25))).isoformat()
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
@@ -283,7 +287,8 @@ def main():
             continue
         f = frames[symbol]
         decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day,
-                                         is_stock=(symbol not in nonstocks))
+                                         is_stock=(symbol not in nonstocks),
+                                         spy_close=spy_close,qqq_close=qqq_close)
         valid = f.loc[f.index >= pd.Timestamp(start_date)]
         trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps,paper_sizing=args.paper_sizing)
         row = {"ticker": symbol, "estado": "OK", "inicio":str(curve.index[0].date()),
