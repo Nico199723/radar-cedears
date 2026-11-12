@@ -394,12 +394,14 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
             sector_slots[p["sector"]]=sector_slots.get(p["sector"],0)+1
         for _,_,a,reason in candidates:
             usa=a["usa"]
-            if usa in open_syms or len(open_syms)>=policy["max_positions"]:
+            cautious=a.get("signal")=="COMPRA CON PRECAUCIÓN"
+            max_slots=min(policy["max_positions"],2) if cautious else policy["max_positions"]
+            max_sector=min(policy["max_per_sector"],1) if cautious else policy["max_per_sector"]
+            if usa in open_syms or len(open_syms)>=max_slots:
                 continue
             sector=a["sector"]
-            if sector_slots.get(sector,0)>=policy["max_per_sector"]:continue
+            if sector_slots.get(sector,0)>=max_sector:continue
             leveraged=usa in {"TQQQ","SQQQ","SPXL","SOXL","SOXS","UPRO","SPXU"}
-            cautious=a.get("signal")=="COMPRA CON PRECAUCIÓN"
             # Incluso con macro favorable, la señal basada en score sin
             # gatillo clásico usa tamaño prudente, nunca el nominal normal.
             conservative=policy["mode"]=="PRUDENTE" or cautious
@@ -412,8 +414,8 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
                 "sector":sector,"tranche":1,"issued_day":latest_day,
                 "reason":reason,"budget":budget,"reserve_usd":reserve,
                 "stop_pct":stop,"risk_mode":("PRUDENTE" if conservative else policy["mode"])+(" / ETF APALANCADO" if leveraged else ""),
-                "max_positions":policy["max_positions"],
-                "max_per_sector":policy["max_per_sector"],
+                "max_positions":max_slots,
+                "max_per_sector":max_sector,
             })
             open_syms.add(usa)
             sector_slots[sector]=sector_slots.get(sector,0)+1
