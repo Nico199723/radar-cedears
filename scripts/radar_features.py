@@ -265,54 +265,101 @@ def ranking_score(row: dict) -> int | None:
     return opportunity_score(row,False)
 
 
+def risk_policy(market: str, vix: float | None) -> dict:
+    """El macro MODULA riesgo; sólo datos no verificables/estrés extremo bloquean.
+
+    Los porcentajes corresponden al simulador ficticio de USD 2000; el radar
+    no coloca órdenes ni determina tamaños para las cuentas reales.
+    """
+    if market not in ("FAVORABLE", "MIXTO", "DEFENSIVO") or vix is None or not math.isfinite(float(vix)) or vix>=30:
+        return {"mode":"SIN NUEVAS ENTRADAS","max_position_usd":0,
+                "reserve_usd":2000,"reserve_pct":100,"stop_pct":None,
+                "max_positions":0,"max_per_sector":0}
+    if market!="FAVORABLE":
+        return {"mode":"PRUDENTE","max_position_usd":120,
+                "reserve_usd":1400,"reserve_pct":70,"stop_pct":6,
+                "max_positions":2,"max_per_sector":1}
+    return {"mode":"NORMAL","max_position_usd":250,
+            "reserve_usd":1000,"reserve_pct":50,"stop_pct":8,
+            "max_positions":4,"max_per_sector":2}
+
+
 def cautious_signal(row: dict | None, market: str, vix: float | None,
                     fresh: bool, base_signal: str) -> tuple[str, str, str | None]:
-    """Candidato muy exigente fuera del régimen FAVORABLE; sin órdenes.
+    """Entrada condicional en acciones Y ETFs pese a SPY/QQQ bajo SMA50.
 
-    Respeta las salidas existentes. No genera compras si macro no verificado,
-    VIX alto, o volumen/serie semanal incompletos. Este método es una propuesta:
-    no usar como decisión final hasta comparación histórica IS/OOS.
+    Usar los subyacentes USA/USD, a cierre. No inventar 5 compras si ningún
+    activo confirma. VIX <30, dato fresco, precio sobre SMA21/50/200,
+    RSI y semanal no quebrados, RS relativo y volumen de calidad. Cada
+    señal con régimen defensivo se acompaña de menor tamaño y stop en paper.
     """
-    if not row or not fresh or market in ("FAVORABLE", "NO VERIFICADO"):
-        return base_signal, "neutral", None
-    if base_signal.startswith(("SALIR", "REDUCIR")):
-        return base_signal, "neutral", None
-    p, m20, m50, m200 = (row.get(k) for k in ("price","ma20","ma50","ma200"))
-    if any(x is None for x in (p,m20,m50,m200)):
-        return base_signal, "neutral", None
-    trend = p > m50 > m200
-    sc = row.get("score", 0)
-    rsi = row.get("rsi14d")
-    weekly = row.get("rsi21w")
-    macd = row.get("macd_hist_d")
-    histw = row.get("macd_hist_w")
-    rvol = row.get("rvol20")
-    usdvol = row.get("dollar_volume20")
-    obv = row.get("obv_up10")
-    stretch = row.get("stretch_atr20")
-    gate = (
-        vix is not None and vix < 25 and trend and sc >= 76
-        and rsi is not None and 46 <= rsi <= 70
-        and weekly is not None and weekly >= 52
-        and macd is not None and macd > 0
-        and histw is not None and histw > 0
-        and rvol is not None and usdvol is not None
-        and usdvol >= 5_000_000 and obv is True
-        and stretch is not None and stretch <= 1.8
-    )
-    if not gate:
-        if trend and sc >= 73 and macd is not None and macd > 0 and vix is not None and vix < 25:
-            return "VIGILAR COMPRA · MACRO", "wait", "Fortaleza individual, pero falta confirmación de volumen/semanal o el gatillo; sin compra automática"
-        return base_signal, "neutral", None
-    pullback = bool(row.get("near20") and rvol >= 0.70)
-    breakout = bool(row.get("breakout") and rvol >= 1.20)
-    if pullback or breakout:
-        return "COMPRA CON PRECAUCIÓN", "wait", (
-            "Mercado mixto/defensivo: señal condicionada a volumen y semanal; "
-            "evaluar sólo primer tramo reducido (20-30% de la posición prevista), "
-            "riesgo 0,5% del capital, invalidación técnica y sin perseguir precio"
-        )
-    return "VIGILAR COMPRA · MACRO", "wait", "Liderazgo relativo y volumen aceptables; esperar pullback o ruptura válida"
+    if row is None or not fresh or market=="FAVORABLE":
+        return base_signal,"neutral",None
+    if base_signal.startswith(("SALIR","REDUCIR","DATOS","SIN")):
+        return base_signal,"neutral",None
+    policy=risk_policy(market,vix)
+    if policy["mode"]=="SIN NUEVAS ENTRADAS":
+        return base_signal,"neutral",None
+
+    def val(k):
+        x=row.get(k)
+        try:
+            x=float(x)
+            return x if math.isfinite(x) else None
+        except (TypeError,ValueError):
+            return None
+
+    p,ma21,ma50,ma200=(val(k) for k in ("price","ma21","ma50","ma200"))
+    if any(x is None or x<=0 for x in (p,ma21,ma50,ma200)):
+        return base_signal,"neutral",None
+    if not (p>ma21 and p>ma50 and p>ma200):
+        return base_signal,"neutral",None
+
+    score,rank,rsi,weekly=(val(k) for k in ("score","rank_score","rsi14d","rsi21w"))
+    macd,macd_w=(val(k) for k in ("macd_hist_d","macd_hist_w"))
+    rvol,dollar,stretch=(val(k) for k in ("rvol20","dollar_volume20","stretch_atr20"))
+    rs_spy,rs_qqq,rs_score=(val(k) for k in ("rs_spy20","rs_qqq20","rs_score"))
+    volume_confirm=val("volume_confirm_score")
+    if any(x is None for x in (score,rank,rsi,weekly,macd,macd_w,
+                                rvol,dollar,stretch,rs_spy,rs_qqq,rs_score,
+                                volume_confirm)):
+        return base_signal,"neutral",None
+
+    structure=(score>=67 and rank>=58 and 43<=rsi<70
+               and weekly>=45 and macd>0 and macd_w>=0
+               and row.get("rank_penalty",0)<24)
+    leadership=(row.get("rs_verified") is True and rs_score>=43
+                and (rs_spy+rs_qqq)/2>=-3.5)
+    liquidity=(dollar>=5_000_000 and rvol>=.75
+               and volume_confirm>=50 and row.get("obv_up10") is True)
+    not_chasing=(-.8<=stretch<=1.6)
+    if not (structure and leadership and liquidity and not_chasing):
+        # Separar la vigilancia del rechazo absoluto del índice.
+        if score>=65 and macd>0 and 40<=rsi<74 and rank>=53:
+            return "VIGILAR COMPRA · MACRO", "wait", (
+                "SPY/QQQ débiles: vigilar fuerza propia, pero aún falta "
+                "confirmación de impulso, volumen, semanal o distancia ATR")
+        return base_signal,"neutral",None
+
+    # No exigir que el cruce ocurra justamente hoy; un pullback sano,
+    # ruptura con volumen o continuación próxima a SMA20 también valen.
+    pullback=bool(row.get("near20"))
+    cross=bool(row.get("cross_up21")) and rvol>=.85
+    breakout=bool(row.get("breakout")) and rvol>=1.15
+    continuation=(0<=stretch<=1.0 and rvol>=.90
+                  and rsi<=64 and rank>=62
+                  and row.get("sma21_age") is not None
+                  and row["sma21_age"]<=14)
+    if not (pullback or cross or breakout or continuation):
+        return "VIGILAR COMPRA · MACRO", "wait", (
+            "No bloquea SPY/QQQ: falta cruce SMA21, pullback, ruptura o "
+            "continuación próxima a la media sin perseguir precio")
+
+    return "COMPRA CON PRECAUCIÓN", "wait", (
+        "Setup individual confirmado con SPY/QQQ débiles. Plan SIMULADO: "
+        "hasta USD 120 por posición, 70% de reserva y stop de referencia 6%; "
+        "compras 40/35/25. Los gaps pueden provocar pérdidas mayores.")
+
 
 
 def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) -> list[dict]:
