@@ -27,6 +27,14 @@ class TrackUI(unittest.TestCase):
         self.assertIn("'./paper.json?refresh='",self.js)
         self.assertIn("j.is_simulated!==true",self.js)
 
+    def test_pages_waits_for_artifact_and_retries_without_reupload(self):
+        self.assertIn("run: sleep 20",self.workflow)
+        self.assertIn("id: deploy_primary",self.workflow)
+        self.assertIn("continue-on-error: true",self.workflow)
+        self.assertIn("if: steps.deploy_primary.outcome == 'failure'",self.workflow)
+        self.assertIn("id: deploy",self.workflow)
+        self.assertEqual(self.workflow.count("uses: actions/upload-pages-artifact@v4"),1)
+
     def test_state_is_in_action_artifacts_without_commits(self):
         self.assertIn("actions: read",self.workflow)
         self.assertIn("name: radar-paper-ledger-v1",self.workflow)
