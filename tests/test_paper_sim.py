@@ -23,7 +23,7 @@ def candles(opens, lows, closes):
 
 
 def asset(day,code="AAA",sector="Tecnología e internet",price=100):
-    data={"asset_kind":"ACCION","date":day,"price":price,"ma21":99,"ma200":87,
+    data={"asset_kind":"ACCION","date":day,"price":price,"ma21":99,"ma50":93,"ma200":87,
           "score":82,"rank_score":88,"rsi14d":58,"macd_hist_d":.2,
           "rvol20":1.2,"dollar_volume20":60_000_000,"obv_up10":True,
           "stretch_atr20":.3,"cross_up21":True,"rsi21w":59,"macd_hist_w":.3}
