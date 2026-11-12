@@ -8,7 +8,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
-from radar_features import volume_profile,ranking_score,cautious_signal,top_five
+from radar_features import volume_profile,ranking_score,cautious_signal,top_five,sma21_priority,ranking_stock_21
 from earnings import parse_earnings,event_label
 
 
@@ -20,6 +20,34 @@ class FeatureTests(unittest.TestCase):
         volumes[-1]=3_000_000
         self.frame=pd.DataFrame({"Close":close,"Open":close,"High":close+2,"Low":close-2,
                                  "Volume":volumes},index=idx)
+
+    def test_sma21_cruce_alcista_solo_con_velas_pasadas(self):
+        c=pd.Series([100.]*22+[103.])
+        r=sma21_priority(c)
+        self.assertTrue(r["cross_up21"])
+        self.assertFalse(r["cross_down21"])
+        self.assertEqual(r["sma21_component"],100)
+        c2=c.copy()
+        c2.iloc[-1]=97
+        s=sma21_priority(c2)
+        self.assertTrue(s["cross_down21"])
+        self.assertEqual(s["sma21_component"],0)
+
+    def test_stock_ranking_21_pesa_mas_que_simple_volumen(self):
+        baseline={"score":70,"volume_score":5,"sma21_component":100}
+        up=ranking_stock_21(baseline)
+        down=ranking_stock_21({**baseline,"sma21_component":0})
+        self.assertEqual(up-down,20)
+        self.assertEqual(up,round(70*.65+7.5+20))
+
+    def test_indice_mantiene_pesos_preexistentes(self):
+        from actualizar import compute
+        from datetime import datetime,timezone
+        with_21=compute(self.frame,datetime(2025,12,31,22,0,tzinfo=timezone.utc),is_stock=True)
+        etf=compute(self.frame,datetime(2025,12,31,22,0,tzinfo=timezone.utc),is_stock=False)
+        self.assertIsNotNone(with_21["ma21"])
+        self.assertEqual(etf["rank_score"],ranking_score(etf))
+        self.assertEqual(with_21["rank_score"],ranking_stock_21(with_21))
 
     def test_rvol_excludes_current_session(self):
         v=volume_profile(self.frame)

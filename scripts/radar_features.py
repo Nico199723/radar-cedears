@@ -41,6 +41,41 @@ def volume_profile(frame: pd.DataFrame) -> dict:
     }
 
 
+def sma21_priority(close: pd.Series) -> dict:
+    """Cruce de cierre contra SMA21: sin mirar la vela futura.
+
+    Puntaje 0..100 es calidad de la relación con SMA21, NO rendimiento esperado.
+    El cruce tiene más peso que simplemente operar arriba de la media.
+    """
+    if len(close) < 23:
+        return {"ma21": None, "ma21_prev": None, "cross_up21": False,
+                "cross_down21": False, "sma21_state": "SIN HISTÓRICO",
+                "sma21_component": None}
+    c = close.astype(float)
+    price,prev=float(c.iloc[-1]),float(c.iloc[-2])
+    ma21=float(c.iloc[-21:].mean())
+    previous_ma21=float(c.iloc[-22:-1].mean())
+    up=prev<=previous_ma21 and price>ma21
+    down=prev>=previous_ma21 and price<ma21
+    if up:rating,state=100,"CRUCE ALCISTA"
+    elif down:rating,state=0,"CRUCE BAJISTA"
+    elif price>ma21 and ma21>previous_ma21:rating,state=80,"SOBRE SMA21 · SUBIENDO"
+    elif price>ma21:rating,state=65,"SOBRE SMA21"
+    elif ma21>previous_ma21:rating,state=35,"BAJO SMA21 · MEDIA SUBIENDO"
+    else:rating,state=15,"BAJO SMA21"
+    return {"ma21":round(ma21,3),"ma21_prev":round(previous_ma21,3),
+            "cross_up21":up,"cross_down21":down,"sma21_state":state,
+            "sma21_component":rating}
+
+
+def ranking_stock_21(row: dict) -> int | None:
+    """Acciones individuales: 65% base, 15% volumen, 20% SMA21 diaria."""
+    sc,vol,m21=row.get("score"),row.get("volume_score"),row.get("sma21_component")
+    if any(v is None for v in (sc,vol,m21)):
+        return None
+    return round(cap(.65*float(sc) + 1.5*float(vol) + .20*float(m21),0,100))
+
+
 def ranking_score(row: dict) -> int | None:
     """85% técnico tradicional + 15% confirmación volumen (0..100)."""
     b,v=row.get("score"),row.get("volume_score")
@@ -122,7 +157,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         relative=round(d["roc20"]-spy_roc,2) if spy_roc is not None and d.get("roc20") is not None else None
         # Regla de desempate declarada. Divergencia vs SPY en 20 ruedas, no
         # una estimación de alpha futura.
-        priority = rank + (5 if d.get("near20") else 0) + (6 if d.get("breakout") else 0)
+        priority = rank + (7 if d.get("cross_up21") else 0) + (5 if d.get("near20") else 0) + (6 if d.get("breakout") else 0)
         priority += cap((relative or 0)/3, -4, 4)
         if d.get("stretch_atr20") is not None and d["stretch_atr20"]>2:
             priority -= 6
@@ -140,7 +175,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         d=a["data"]
         e=a.get("earnings") or {}
         event_days=e.get("days_until")
-        tag="GATILLO DE ENTRADA" if (d.get("breakout") or d.get("near20")) else "ESPERAR GATILLO"
+        tag="CRUCE ALCISTA SMA21 · CONFIRMAR" if d.get("cross_up21") else ("GATILLO DE ENTRADA" if (d.get("breakout") or d.get("near20")) else "ESPERAR GATILLO")
         if market!="FAVORABLE":
             tag += " · RIESGO MACRO"
         if event_days is not None and 0<=event_days<=7:
@@ -150,7 +185,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
             "rank_score":d["rank_score"],"score":d["score"],
             "price":d["price"],"ma20":d["ma20"],"invalid_usd":d.get("invalid_usd"),
             "target_2r":d.get("target_2r"),
-            "relative_spy20":relative,"rvol20":d.get("rvol20"),
+            "relative_spy20":relative,"rvol20":d.get("rvol20"),"ma21":d.get("ma21"),"sma21_state":d.get("sma21_state"),
             "dollar_volume20":d.get("dollar_volume20"),"signal":a["signal"],"tag":tag,
             "earnings":e,"date":d.get("date"),
         })

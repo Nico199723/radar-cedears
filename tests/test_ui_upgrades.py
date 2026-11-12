@@ -39,7 +39,7 @@ class UIUpgradeTests(unittest.TestCase):
         self.assertIn("cautious_signal",self.updater)
 
     def test_volume_rank_not_replaces_legacy_signal_score(self):
-        self.assertIn('result["rank_score"] = ranking_score(result)',self.updater)
+        self.assertIn('result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)',self.updater)
         self.assertIn('sc,rsiD,macdD=row["score"]',self.updater)
 
 
