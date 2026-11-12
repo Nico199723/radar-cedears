@@ -189,6 +189,12 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     d=a.get("data")
     if not d or d.get("asset_kind") not in ("ACCION","ETF / INDICE / NO CLASIFICADO") or not a.get("usa"):
         return False,""
+    # Piso transversal entre radar y track record. No entrar aunque el score
+    # técnico heredado sea 90 si el Score Oportunidad visible es <70.
+    from radar_features import MIN_BUY_SCORE
+    score_o=d.get("rank_score")
+    if score_o is None or not math.isfinite(float(score_o)) or float(score_o)<MIN_BUY_SCORE:
+        return False,"SCORE OPORTUNIDAD <70: NO ABRIR POSICIÓN"
     if risk_policy(market,vix)["max_position_usd"]==0:
         return False,""
     e=a.get("earnings") or {}
