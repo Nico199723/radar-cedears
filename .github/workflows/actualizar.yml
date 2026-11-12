@@ -24,6 +24,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -52,8 +53,17 @@ jobs:
         run: python scripts/actualizar.py --check
       - name: Tests del motor sin conexión
         run: python -m unittest discover -s tests -v
-      - name: Descargar mercado USD y calcular señales
+      - name: Descargar mercado USD, actualizar señales y cartera simulada
         run: python scripts/actualizar.py
+        env:
+          GH_ACTIONS_TOKEN: ${{ github.token }}
+      - name: Guardar historial simulado entre corridas (sin commits)
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-paper-ledger-v1
+          path: .paper/ledger.json
+          retention-days: 90
+          if-no-files-found: error
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Subir sitio como artefacto
