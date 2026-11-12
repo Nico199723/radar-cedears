@@ -12,7 +12,7 @@ class BrowserFaviconTest(unittest.TestCase):
         png=(ROOT/"docs/favicon.png").read_bytes()
         self.assertIn('<link rel="icon" type="image/png"',html)
         self.assertIn('href="favicon.png?v=20261112"',html)
-        self.assertEqual(png[:8],b"\\x89PNG\\r\\n\\x1a\\n")
+        self.assertEqual(png[:8],bytes.fromhex("89504e470d0a1a0a"))
         self.assertGreater(len(png),500)
         self.assertEqual(struct.unpack(">II",png[16:24]),(48,48))
 
