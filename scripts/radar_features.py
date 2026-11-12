@@ -351,7 +351,7 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
             "No bloquea SPY/QQQ: falta cruce SMA21, pullback, ruptura o "
             "continuación próxima a la media sin perseguir precio")
 
-    return "COMPRA CON PRECAUCIÓN", "wait", (
+    return "COMPRA CON PRECAUCIÓN", "caution", (
         "Setup individual confirmado con SPY/QQQ débiles. Plan SIMULADO: "
         "hasta USD 120 por posición, 70% de reserva y stop de referencia 6%; "
         "compras 40/35/25. Los gaps pueden provocar pérdidas mayores.")
@@ -411,9 +411,9 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
             continue
         rank=d.get("rank_score")
         dollar=d.get("dollar_volume20")
-        if rank is None or rank<58 or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
+        if rank is None or rank<MIN_OPTION_SCORE or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
             continue
-        if d.get("score",0)<65 or d.get("price",0)<=d.get("ma200",float("inf")):
+        if d.get("price",0)<=d.get("ma200",float("inf")):
             continue
         if d.get("rsi14d") is None or not(35<d["rsi14d"]<75):
             continue
@@ -424,13 +424,13 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         relative=d.get("rs_spy20")
         # Regla de desempate declarada. Divergencia vs SPY en 20 ruedas, no
         # una estimación de alpha futura.
-        priority = rank + (7 if d.get("cross_up21") else 0) + (5 if d.get("near20") else 0) + (6 if d.get("breakout") else 0)
+        priority = rank + 3.0*(d.get("sma21_component") or 0)/100 + 2.5*min(1.,max(0.,(d.get("rvol20") or 0)-.6))
         priority += cap((relative or 0)/3, -4, 4)
         priority += cap((d.get("rs_qqq20") or 0)/3, -4, 4)
-        if d.get("stretch_atr20") is not None and d["stretch_atr20"]>2:
-            priority -= 6
+        if d.get("stretch_atr20") is not None:
+            priority -= 8*(1-math.exp(-max(0.,d["stretch_atr20"]-1.2)))
         if d.get("rvol20") is not None and d["rvol20"]<0.65:
-            priority -= 3
+            priority -= 3*(1-d["rvol20"]/.65)
         candidates.append((priority,a,relative))
     candidates.sort(key=lambda v:(v[0],v[1]["data"]["rank_score"]),reverse=True)
     selection=[]
@@ -444,6 +444,8 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         e=a.get("earnings") or {}
         event_days=e.get("days_until")
         tag="CRUCE ALCISTA SMA21 · CONFIRMAR" if d.get("cross_up21") else ("GATILLO DE ENTRADA" if (d.get("breakout") or d.get("near20")) else "ESPERAR GATILLO")
+        if a.get("signal") in ("VIGILAR COMPRA · SCORE","VIGILAR COMPRA · MACRO"):
+            tag="SCORE PARA ESTUDIAR · FALTA CONFIRMACIÓN"
         if market!="FAVORABLE":
             tag += " · RIESGO MACRO"
         if event_days is not None and 0<=event_days<=7:
@@ -451,6 +453,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         selection.append({
             "ticker":a["ticker"], "usa":a["usa"],"sector":sector,
             "rank_score":d["rank_score"],"score":d["score"],
+            "candidate":a.get("candidate"),"rank_level":d.get("rank_level"),
             "price":d["price"],"ma20":d["ma20"],"invalid_usd":d.get("invalid_usd"),
             "target_2r":d.get("target_2r"),
             "relative_spy20":relative,"relative_qqq20":d.get("rs_qqq20"),
