@@ -13,6 +13,8 @@ from typing import Any
 
 import pandas as pd
 
+from radar_features import risk_policy
+
 VERSION="paper-sma21-v1"
 INITIAL=2000.0
 RESERVE=1000.0
@@ -71,7 +73,7 @@ def add_fill(s:dict, day:str, usa:str, price:float, qty:float, action:str,
 def mark_stop(p:dict, close:float) -> None:
     """Trailing anclado SOLO al cierre conocido, vigente desde próxima rueda."""
     p["peak_close"]=max(float(p.get("peak_close",0)),close)
-    p["stop_usd"]=number(max(p["stop_usd"],p["peak_close"]*(1-STOP_PCT)),4)
+    p["stop_usd"]=number(max(p["stop_usd"],p["peak_close"]*(1-float(p.get("stop_pct",STOP_PCT)))),4)
 
 
 def sell_fraction(s:dict, usa:str, day:str, price:float, reason:str,
@@ -146,13 +148,16 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
     p=s["positions"].get(usa)
     stage=int(order["tranche"])
     if p is None:
-        if stage!=1 or len(s["positions"])>=MAX_SLOTS:
+        if stage!=1 or len(s["positions"])>=int(order.get("max_positions",MAX_SLOTS)):
             return False
         sector_count=sum(1 for x in s["positions"].values() if x["sector"]==order["sector"])
-        if sector_count>=MAX_SECTOR_SLOTS:return False
+        if sector_count>=int(order.get("max_per_sector",MAX_SECTOR_SLOTS)):return False
         p={"usa":usa,"ticker":order["ticker"],"sector":order["sector"],
            "entry_date":day,"signal_day":order["issued_day"],
-           "budget":min(MAX_POSITION,.125*INITIAL),
+           "budget":min(float(order.get("budget",MAX_POSITION)),MAX_POSITION),
+           "reserve_usd":float(order.get("reserve_usd",RESERVE)),
+           "stop_pct":float(order.get("stop_pct",STOP_PCT)),
+           "risk_mode":order.get("risk_mode","NORMAL"),
            "shares":0.0,"spent":0.0,"tranche_count":0,"last_fill_day":"",
            "stop_usd":0.0,"peak_close":0.0,"sessions_held":0,
            "profit_taken":False,"reduction_taken":False,"exit_started":False,
@@ -161,7 +166,7 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
         return False
     # Retiene USD 1000 siempre, con USD 20 máximo de pérdida teórica al stop.
     remaining=min(p["budget"]*TRANCHES[stage-1],
-                  max(0,s["cash"]-RESERVE))
+                  max(0,s["cash"]-max(p["reserve_usd"],float(order.get("reserve_usd",p["reserve_usd"])))))
     if remaining<10:return False
     effective=open_price*(1+SLIP_BPS/10000)
     qty=remaining/(effective*(1+FEE_BPS/10000))
@@ -172,7 +177,7 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
     p["total_invested"]=float(p.get("total_invested",0))+cost
     p["tranche_count"]=stage
     p["last_fill_day"]=day
-    p["stop_usd"]=number(max(p["stop_usd"],(p["spent"]/p["shares"])*(1-STOP_PCT)),4)
+    p["stop_usd"]=number(max(p["stop_usd"],(p["spent"]/p["shares"])*(1-p["stop_pct"])),4)
     s["cash"]-=cost
     s["positions"][usa]=p
     add_fill(s,day,usa,effective,qty,f"COMPRA {stage}/3",order.get("reason","SMA21"),cost)
@@ -182,37 +187,35 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
 def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     """Variante experimental EXCLUSIVA del papel simulado, no modifica señales web."""
     d=a.get("data")
-    if not d or d.get("asset_kind")!="ACCION" or not a.get("usa"):
+    if not d or d.get("asset_kind") not in ("ACCION","ETF / INDICE / NO CLASIFICADO") or not a.get("usa"):
         return False,""
-    if market=="NO VERIFICADO" or vix is None or vix>=25:
+    if risk_policy(market,vix)["max_position_usd"]==0:
         return False,""
     e=a.get("earnings") or {}
     if e.get("days_until") is not None and 0<=e["days_until"]<=7:
         return False,"BALANCE EN 7 DÍAS"
     if a.get("signal","").startswith(("SALIR","REDUCIR","DATOS","SIN")):
         return False,""
+    if market!="FAVORABLE":
+        # Mismo resultado que muestra el screener (no comprar sólo por macro).
+        return (True,"COMPRA CON PRECAUCIÓN · TAMAÑO REDUCIDO") if a.get("signal")=="COMPRA CON PRECAUCIÓN" else (False,"")
     p,ma21,ma200=(d.get(k) for k in ("price","ma21","ma200"))
     if not all(x is not None and x>0 for x in (p,ma21,ma200)):
         return False,""
     if not(p>ma21 and p>ma200):return False,""
     score,rank=d.get("score",0),d.get("rank_score",0)
     rsi,macd=d.get("rsi14d"),d.get("macd_hist_d")
-    if score<65 or rank<68 or rsi is None or not(46<=rsi<=70) or macd is None or macd<=0:
+    if score<65 or rank is None or rank<65 or rsi is None or not(46<=rsi<70) or macd is None or macd<=0:
         return False,""
     if d.get("dollar_volume20") is None or d["dollar_volume20"]<5_000_000:
         return False,""
-    if d.get("rvol20") is None or d["rvol20"]<.80 or d.get("obv_up10") is not True:
+    if d.get("rvol20") is None or d["rvol20"]<.75 or d.get("obv_up10") is not True:
         return False,""
     if d.get("stretch_atr20") is None or d["stretch_atr20"]>1.8:
         return False,""
-    trigger=bool(d.get("cross_up21")) or a.get("signal")=="COMPRA CONDICIONAL"
+    trigger=bool(d.get("cross_up21") or d.get("near20") or d.get("breakout")) or a.get("signal")=="COMPRA CONDICIONAL"
     if not trigger:return False,""
-    if market!="FAVORABLE":
-        if score<76 or d.get("rsi21w") is None or d["rsi21w"]<52 or (
-           d.get("macd_hist_w") is None or d["macd_hist_w"]<=0):
-            return False,""
-    return True,("CRUCE ALCISTA SMA21" if d.get("cross_up21") else "COMPRA CONDICIONAL") + (
-        " · MACRO EN PRECAUCIÓN" if market!="FAVORABLE" else "")
+    return True,"COMPRA CONDICIONAL O CRUCE SMA21"
 
 
 def equity_at(s:dict, frames:dict, day:str)->tuple[float,list[str]]:
@@ -354,15 +357,19 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
                         stage==3 and d["price"]>avg*1.02 and d.get("obv_up10") is True)):
                     s["orders"].append({"side":"BUY","usa":usa,"ticker":p["ticker"],
                                         "sector":p["sector"],"tranche":stage,"issued_day":latest_day,
-                                        "reason":"AGREGAR TRAMO TRAS CONFIRMACIÓN SMA21"})
-        # Nuevas entradas: máximo 4 posiciones, concentración sectorial <=2.
+                                        "reason":"AGREGAR TRAMO TRAS CONFIRMACIÓN SMA21",
+                                        "reserve_usd":risk_policy(macro,vix)["reserve_usd"]})
+        # SPY/QQQ bajo SMA50 implica size reducido, no prohibición general.
+        policy=risk_policy(macro,vix)
         candidates=[]
-        for a in assets:
-            d=a.get("data") or {}
-            if d.get("date")!=latest_day:continue
-            allowed,reason=evaluate_entry(a,macro,vix)
-            if allowed:
-                candidates.append((d.get("rank_score",0),d.get("cross_up21",False),a,reason))
+        if policy["max_position_usd"]>0:
+            for a in assets:
+                d=a.get("data") or {}
+                if d.get("date")!=latest_day:continue
+                allowed,reason=evaluate_entry(a,macro,vix)
+                if allowed:
+                    candidates.append((d.get("rank_score") or 0,
+                                       bool(d.get("cross_up21")),a,reason))
         candidates.sort(key=lambda x:(x[1],x[0]),reverse=True)
         open_syms=set(s["positions"])|{o["usa"] for o in s["orders"]}
         sector_slots={}
@@ -370,14 +377,23 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
             sector_slots[p["sector"]]=sector_slots.get(p["sector"],0)+1
         for _,_,a,reason in candidates:
             usa=a["usa"]
-            if usa in open_syms or len(open_syms)>=MAX_SLOTS:
+            if usa in open_syms or len(open_syms)>=policy["max_positions"]:
                 continue
             sector=a["sector"]
-            if sector_slots.get(sector,0)>=MAX_SECTOR_SLOTS:continue
-            if s["cash"]<=RESERVE+100:break
-            s["orders"].append({"side":"BUY","usa":usa,"ticker":a["ticker"],
-                                "sector":sector,"tranche":1,"issued_day":latest_day,
-                                "reason":reason})
+            if sector_slots.get(sector,0)>=policy["max_per_sector"]:continue
+            leveraged=usa in {"TQQQ","SQQQ","SPXL","SOXL","SOXS","UPRO","SPXU"}
+            budget=min(policy["max_position_usd"],60 if policy["mode"]=="PRUDENTE" else 120) if leveraged else policy["max_position_usd"]
+            reserve=max(policy["reserve_usd"],1600 if policy["mode"]=="PRUDENTE" else 1200) if leveraged else policy["reserve_usd"]
+            stop=(.05 if policy["mode"]=="PRUDENTE" else .06) if leveraged else policy["stop_pct"]/100
+            if s["cash"]-reserve<budget*TRANCHES[0]:continue
+            s["orders"].append({
+                "side":"BUY","usa":usa,"ticker":a["ticker"],
+                "sector":sector,"tranche":1,"issued_day":latest_day,
+                "reason":reason,"budget":budget,"reserve_usd":reserve,
+                "stop_pct":stop,"risk_mode":policy["mode"]+(" / ETF APALANCADO" if leveraged else ""),
+                "max_positions":policy["max_positions"],
+                "max_per_sector":policy["max_per_sector"],
+            })
             open_syms.add(usa)
             sector_slots[sector]=sector_slots.get(sector,0)+1
         s["last_signal_session"]=latest_day
@@ -404,6 +420,8 @@ def public_summary(s:dict,frames:dict[str,pd.DataFrame])->dict:
                                "stop_usd":p["stop_usd"],"market_value_usd":number(px*p["shares"],2) if px is not None else None,
                                "unrealized_usd":number(unreal,2) if unreal is not None else None,
                                "sessions_held":p["sessions_held"],
+                               "risk_mode":p.get("risk_mode","NORMAL"),
+                               "stop_pct":100*p.get("stop_pct",STOP_PCT),
                                "profit_taken":bool(p.get("profit_taken")),
                                "reduction_taken":bool(p.get("reduction_taken")),
                                "realized_usd":number(p.get("realized_pnl_usd",0),2)})
@@ -419,7 +437,10 @@ def public_summary(s:dict,frames:dict[str,pd.DataFrame])->dict:
         "open_positions":open_positions,"pending_orders":s["orders"],
         "closed_trades":closed[-100:],"fills":s["fills"][-200:],
         "equity_history":s["equity_history"][-150:],"unpriced_symbols":missing,
-        "assumptions":{"stop_pct":8,"fee_bps_each_side":FEE_BPS,
+        "assumptions":{"stop_pct":8,"prudent_stop_pct":6,
+             "prudent_max_position_usd":120,"prudent_reserve_pct":70,
+             "prudent_max_positions":2,"prudent_leveraged_etf_budget":60,
+             "fee_bps_each_side":FEE_BPS,
              "slippage_bps_each_side":SLIP_BPS,"reserve_usd":RESERVE,
              "max_position_usd":MAX_POSITION,"max_positions":MAX_SLOTS,
              "entry_tranches":[40,35,25],"exit_tranches":{"take_profit_2r_pct":50,
