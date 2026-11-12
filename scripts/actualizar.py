@@ -134,8 +134,10 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
     ma20 = float(c.tail(20).mean())
     ma50 = float(c.tail(50).mean())
     ma200 = float(c.tail(200).mean())
-    rsiD = float(rsi(c, 14).iloc[-1])
-    histD = float(macd_hist(c).iloc[-1])
+    rsi_daily = rsi(c,14)
+    macd_daily = macd_hist(c)
+    rsiD = float(rsi_daily.iloc[-1])
+    histD = float(macd_daily.iloc[-1])
     roc20 = float((price / c.iloc[-21] - 1) * 100)
     vol = float(c.pct_change().tail(20).std() * np.sqrt(252) * 100)
     # Semana completa: sólo viernes cerrado, evita RSI semanal parcial.
@@ -187,7 +189,7 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
     else:
         obj1 = obj2 = None
     volumes = volume_profile(df) if {"Volume", "High", "Low"} <= set(df.columns) else {}
-    sma21 = sma21_priority(c)
+    sma21 = sma21_priority(c,rsi_daily,macd_daily,volumes.get("atr14"))
     rs = relative_strength(c,spy_close,qqq_close)
     result = {
         "date":date.isoformat(), "price":number(price,3), "ma20":number(ma20,3),
@@ -374,10 +376,10 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.3-rs-volume-rsi-sma200-acciones-etfs-prudentes-v1',
+          'rules_version':'1.4-sma21-aging-gradient-rsi-macd-acciones-etfs-v1',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
-          'note':'Acciones y ETFs: score oportunidad 30% fuerza relativa SPY/QQQ, 20% volumen confirmado, SMA21 20%/15%, base 30%/35%; RSI extremo y bajo SMA200 penalizados. Macro adversa permite sólo compra con precaución y tamaño reducido. Sin rentabilidad OOS demostrada, BYMA/ratio/spread sin validar.'},
+          'note':'Score Oportunidad con fuerza relativa SPY/QQQ (30%) y volumen confirmado (20%). SMA21 premia cruces recientes y pierde peso al madurar 10+ ruedas, penaliza pérdida de pendiente RSI/MACD, extremos y baja SMA200. Macro adversa modera tamaño, no bloquea automáticamente. Sin ventaja OOS demostrada; BYMA sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 implica régimen defensivo y menor sizing; puede haber compra prudente con fuerza propia, SMA21 y volumen. VIX>=25 o macro sin verificar bloquean nuevas compras. No ejecuta órdenes.'},
         'assets':assets,'sectors':sectors,'top5':selection
