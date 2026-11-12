@@ -157,7 +157,7 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
 def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     """Variante experimental EXCLUSIVA del papel simulado, no modifica señales web."""
     d=a.get("data")
-    if not d or d.get("asset_kind")!="ACCION" or not a.get("usa"):
+    if not d or d.get("asset_kind") not in ("ACCION","ETF / INDICE / NO CLASIFICADO") or not a.get("usa"):
         return False,""
     if market=="NO VERIFICADO" or vix is None or vix>=25:
         return False,""
@@ -172,11 +172,13 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     if not(p>ma21 and p>ma200):return False,""
     score,rank=d.get("score",0),d.get("rank_score",0)
     rsi,macd=d.get("rsi14d"),d.get("macd_hist_d")
-    if score<65 or rank<68 or rsi is None or not(46<=rsi<=70) or macd is None or macd<=0:
+    if (score<65 or rank is None or rank<61 or rsi is None or not(46<=rsi<=70)
+        or macd is None or macd<=0 or not d.get("rs_verified")
+        or d.get("rs_score",0)<45 or d.get("rank_penalty",0)>=20):
         return False,""
     if d.get("dollar_volume20") is None or d["dollar_volume20"]<5_000_000:
         return False,""
-    if d.get("rvol20") is None or d["rvol20"]<.80 or d.get("obv_up10") is not True:
+    if d.get("rvol20") is None or d["rvol20"]<.80 or d.get("obv_up10") is not True or d.get("volume_confirm_score",0)<55:
         return False,""
     if d.get("stretch_atr20") is None or d["stretch_atr20"]>1.8:
         return False,""
@@ -331,12 +333,18 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
             sector=a["sector"]
             if sector_slots.get(sector,0)>=policy["max_sector_slots"]:continue
             if s["cash"]<=policy["reserve"]+10:break
+            # ETFs 2x/3x: doble precaución por exposición apalancada.
+            leveraged=usa in {"TQQQ","SQQQ","SOXL","SOXS","SPXL"}
+            budget=min(policy["budget"],60 if policy["risk_mode"]=="PRUDENTE" else 120) if leveraged else policy["budget"]
+            reserve=max(policy["reserve"],1600 if policy["risk_mode"]=="PRUDENTE" else 1200) if leveraged else policy["reserve"]
+            stop=min(policy["stop_pct"],.05 if policy["risk_mode"]=="PRUDENTE" else .06) if leveraged else policy["stop_pct"]
             s["orders"].append({"side":"BUY","usa":usa,"ticker":a["ticker"],
                                 "sector":sector,"tranche":1,"issued_day":latest_day,
-                                "budget":policy["budget"],"reserve_usd":policy["reserve"],
-                                "stop_pct":policy["stop_pct"],"max_slots":policy["max_slots"],
+                                "budget":budget,"reserve_usd":reserve,
+                                "stop_pct":stop,"max_slots":policy["max_slots"],
                                 "max_sector_slots":policy["max_sector_slots"],
-                                "risk_mode":policy["risk_mode"],"reason":reason})
+                                "risk_mode":policy["risk_mode"]+(" · ETF APALANCADO" if leveraged else ""),
+                                "reason":reason})
             open_syms.add(usa)
             sector_slots[sector]=sector_slots.get(sector,0)+1
         s["last_signal_session"]=latest_day
