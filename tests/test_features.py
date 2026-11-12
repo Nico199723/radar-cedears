@@ -98,6 +98,20 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(cautious_signal(d,"MIXTO",26,True,"ESPERAR")[0],
                          "ESPERAR")
 
+    def test_continuacion_cercana_ma21_es_entrada_prudente(self):
+        d=self._sample()
+        d.update({"near20":False,"breakout":False,"cross_up21":False,
+                  "rank_score":86,"stretch_atr20":.9,"rvol20":.95})
+        self.assertEqual(cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+                         "COMPRA CON PRECAUCIÓN")
+        d["stretch_atr20"]=1.5
+        self.assertEqual(cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+                         "VIGILAR COMPRA · MACRO")
+        d["stretch_atr20"]=.9
+        d["rvol20"]=.70
+        self.assertNotEqual(cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+                            "COMPRA CON PRECAUCIÓN")
+
     def test_cautious_macro_can_find_exception(self):
         sig,_,note=cautious_signal(self._sample(),"DEFENSIVO",18,True,"ESPERAR MACRO")
         self.assertEqual(sig,"COMPRA CON PRECAUCIÓN")
