@@ -117,7 +117,7 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
         return False
     # Retiene USD 1000 siempre, con USD 20 máximo de pérdida teórica al stop.
     remaining=min(p["budget"]*TRANCHES[stage-1],
-                  max(0,RESERVE*0 + s["cash"]-RESERVE))
+                  max(0,s["cash"]-RESERVE))
     if remaining<10:return False
     effective=open_price*(1+SLIP_BPS/10000)
     qty=remaining/(effective*(1+FEE_BPS/10000))
@@ -253,7 +253,7 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
     # Solo el cierre más reciente que realmente fue procesado puede generar órdenes.
     # En el arranque el último día ya figura como procesado: NO inventar fills previos.
     if s["last_session"]==latest_day and s["last_signal_session"]<latest_day:
-        today_assets={a["usa"]:a for a in assets if a.get("usa") and a.get("data",{}).get("date")==latest_day}
+        today_assets={a["usa"]:a for a in assets if a.get("usa") and (a.get("data") or {}).get("date")==latest_day}
         for usa,p in list(s["positions"].items()):
             a=today_assets.get(usa)
             if not a:continue
