@@ -87,6 +87,54 @@ class FloorAndGreenTests(unittest.TestCase):
                 a["data"]["rank_score"]=70
                 self.assertTrue(evaluate_entry(a,macro,18)[0])
 
+    def test_75_qualifies_green_caution_without_intraday_trigger(self):
+        from radar_features import high_score_precaution
+        for macro in ("FAVORABLE","DEFENSIVO","MIXTO"):
+            for kind in ("ACCION","ETF / INDICE / NO CLASIFICADO"):
+                d=asset(76,kind)
+                d.update({"near20":False,"breakout":False,
+                          "cross_up21":False,"sma21_age":11})
+                self.assertTrue(high_score_precaution(d,macro,18,True)[0])
+                cand=buy_candidate(d,"MANTENER / ESPERAR",True)
+                s,t,reason=reconcile_buy_label(
+                    d,"MANTENER / ESPERAR","hold",[],True,cand,macro,18)
+                self.assertEqual(s,"COMPRA CON PRECAUCIÓN")
+                self.assertEqual(t,"caution")
+                a={"ticker":"AAA","usa":"AAA","sector":"Salud",
+                   "signal":s,"data":d,"earnings":None}
+                self.assertTrue(evaluate_entry(a,macro,18)[0])
+
+    def test_75_never_overrides_rsi_80_sma200_exit_or_vix_stress(self):
+        from radar_features import high_score_precaution
+        for key,value in (("rsi14d",80),("price",85),("macd_hist_w",-.2),
+                          ("obv_up10",False),("stretch_atr20",2.8),
+                          ("dollar_volume20",1000),("rs_verified",False)):
+            d=asset(92)
+            d[key]=value
+            self.assertFalse(high_score_precaution(d,"DEFENSIVO",18,True)[0],key)
+            s,_,_=reconcile_buy_label(d,"MANTENER / ESPERAR","hold",[],True,
+                                      buy_candidate(d,"MANTENER / ESPERAR",True),
+                                      "DEFENSIVO",18)
+            self.assertNotEqual(s,"COMPRA CON PRECAUCIÓN",key)
+        d=asset(85)
+        self.assertFalse(high_score_precaution(d,"DEFENSIVO",31,True)[0])
+        self.assertFalse(high_score_precaution(d,"NO VERIFICADO",18,True)[0])
+        s,_,_=reconcile_buy_label(d,"MANTENER / ESPERAR","hold",[],True,
+                                  buy_candidate(d,"MANTENER / ESPERAR",True),
+                                  "NO VERIFICADO",18)
+        self.assertNotEqual(s,"COMPRA CON PRECAUCIÓN")
+
+    def test_from_70_to_74_requires_classic_trigger(self):
+        d=asset(72)
+        d.update({"near20":False,"breakout":False,"cross_up21":False})
+        s,t,_=reconcile_buy_label(d,"MANTENER / ESPERAR","hold",[],True,
+                                  buy_candidate(d,"MANTENER / ESPERAR",True),
+                                  "DEFENSIVO",18)
+        self.assertEqual(s,"VIGILAR COMPRA · SCORE")
+        a={"ticker":"AAA","usa":"AAA","sector":"Salud",
+           "signal":s,"data":d,"earnings":None}
+        self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
+
     def test_color_is_really_green_not_just_label(self):
         css=(ROOT/"docs/style.css").read_text(encoding="utf-8")
         js=(ROOT/"docs/app.js").read_text(encoding="utf-8")
