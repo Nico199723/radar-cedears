@@ -25,7 +25,7 @@ jobs:
       - name: Tests completos offline
         run: python -m unittest discover -s tests -v
   datos-reales:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 110
     steps:
@@ -35,11 +35,16 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - name: Backtest con 10 años, costos y benchmarks
-        run: python scripts/backtest.py --years 10 --fee-bps 5 --slippage-bps 10
+      - name: Backtest exploratorio con datos de mercado
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python scripts/backtest.py --years 5 --tickers AMZN,NVDA,MSFT,META,GOOGL,JPM,TGT,COPX,IREN,TQQQ --fee-bps 5 --slippage-bps 10
+          else
+            python scripts/backtest.py --years 10 --fee-bps 5 --slippage-bps 10
+          fi
       - name: Guardar resultados (sin commit, sin publicar en Pages)
         uses: actions/upload-artifact@v4
         with:
-          name: backtest-base-10y
+          name: backtest-base-resultado
           path: backtest-out/
           retention-days: 30
