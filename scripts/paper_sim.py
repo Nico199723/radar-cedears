@@ -208,8 +208,6 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
         for o in s["orders"]:
             usa=o["usa"]
             frame=frames.get(usa)
-            if not frame: # Pandas DataFrame no permite evaluación booleana.
-                pass
             bar=None
             if frame is not None:
                 daily=session_frame(frame)
