@@ -223,6 +223,77 @@ def score_penalties(row: dict) -> tuple[float,list[str]]:
     return round(penalty,2),reasons
 
 
+def legacy_entry_rank(close: pd.Series, rsi_values: pd.Series,
+                      macd_values: pd.Series, row: dict, is_stock: bool) -> tuple[int|None,int]:
+    """Congelar la escala de decisión pre-v1.6 hasta tener backtest OOS.
+
+    El Score Oportunidad puede volverse más suave para ranking/vigilancia,
+    pero las compras prudentes no deben cambiar ocultamente por eso.
+    """
+    if any(row.get(k) is None for k in ("score","volume_score","rvol20","sma21_age",
+                                        "sma21_slope_pct3","ma21","price")):
+        return None,0
+    price=float(row["price"])
+    age=int(row["sma21_age"])
+    slope=float(row["sma21_slope_pct3"])
+    dist=row.get("sma21_distance_atr")
+    if row.get("cross_down21"):sma=7
+    elif price<=row["ma21"]:sma=22
+    elif age==1:sma=94
+    elif age<=3:sma=88
+    elif age<=6:sma=79
+    elif age<=9:sma=70
+    elif age<=14:sma=58
+    else:sma=46
+    sma+=7 if slope>=.45 else 3 if slope>0 else -11 if slope<-.45 else -6 if slope<0 else 0
+    if dist is not None:
+        if dist>2:sma-=20
+        elif dist>1.4:sma-=11
+        elif row.get("cross_up21") and dist>=.2:sma+=4
+    sma=cap(sma,0,100)
+    rvol=float(row["rvol20"])
+    obv_up=row.get("obv_up10") is True
+    up=bool(float(close.iloc[-1])>=float(close.iloc[-2]))
+    impact=cap((rvol-.8)*30,0,35)
+    vol=cap(45+(15 if obv_up else -15)
+            +(impact if up and obv_up else -impact)+(5 if up else -8),0,100)
+    loss=0
+    if len(rsi_values)>=4:
+        r=rsi_values.astype(float)
+        d1=float(r.iloc[-1]-r.iloc[-2]);d3=float(r.iloc[-1]-r.iloc[-4])
+        if math.isfinite(d1) and math.isfinite(d3):
+            loss+=min(12,(2 if d1<0 else 0)+min(10,round(max(0,-d3)*1.2)))
+    if len(macd_values)>=4:
+        m=macd_values.astype(float)
+        d1=float((m.iloc[-1]-m.iloc[-2])/price*100)
+        d3=float((m.iloc[-1]-m.iloc[-4])/price*100)
+        if math.isfinite(d1) and math.isfinite(d3):
+            loss+=min(12,(2 if d1<0 else 0)+min(10,round(max(0,-d3)*70)))
+    daily=row.get("rsi14d")
+    if daily is not None:
+        if daily>=80:loss+=30
+        elif daily>=75:loss+=22
+        elif daily>=70:loss+=12
+        elif daily>=67:loss+=5
+        elif daily<=25:loss+=24
+        elif daily<=30:loss+=17
+        elif daily<=35:loss+=10
+        elif daily<=40:loss+=5
+    weekly=row.get("rsi21w")
+    monthly=row.get("rsi21m")
+    if weekly is not None and (weekly>=75 or weekly<=30):loss+=8
+    if monthly is not None and (monthly>=75 or monthly<=25):loss+=8
+    ma200=row.get("ma200")
+    if ma200 and price<ma200:
+        loss+=min(30,20+int(((1-price/ma200)*100)//2))
+    rs=row.get("rs_score")
+    verified=bool(row.get("rs_verified")) and rs is not None
+    wb,wm=(.30,.20) if is_stock else (.35,.15)
+    gross=wb*float(row["score"])+wm*sma+.30*(float(rs) if verified else 50.)+.20*vol
+    if not verified:loss+=12
+    return round(cap(gross-loss,0,100)),int(loss)
+
+
 def opportunity_score(row: dict, is_stock: bool=True) -> int | None:
     """Ranking 0..100. RS30%, volumen20%, SMA21 20%/15%, base30%/35%.
 
@@ -316,7 +387,8 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
     if not (p>ma21 and p>ma50 and p>ma200):
         return base_signal,"neutral",None
 
-    score,rank,rsi,weekly=(val(k) for k in ("score","rank_score","rsi14d","rsi21w"))
+    score,rsi,weekly=(val(k) for k in ("score","rsi14d","rsi21w"))
+    rank=val("rank_score_signal") if row.get("rank_score_signal") is not None else val("rank_score")
     macd,macd_w=(val(k) for k in ("macd_hist_d","macd_hist_w"))
     rvol,dollar,stretch=(val(k) for k in ("rvol20","dollar_volume20","stretch_atr20"))
     rs_spy,rs_qqq,rs_score=(val(k) for k in ("rs_spy20","rs_qqq20","rs_score"))
@@ -328,7 +400,7 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
 
     structure=(score>=67 and rank>=58 and 43<=rsi<70
                and weekly>=45 and macd>0 and macd_w>=0
-               and row.get("rank_penalty",0)<24)
+               and row.get("rank_penalty_signal",row.get("rank_penalty",0))<24)
     leadership=(row.get("rs_verified") is True and rs_score>=43
                 and (rs_spy+rs_qqq)/2>=-3.5)
     liquidity=(dollar>=5_000_000 and rvol>=.75
