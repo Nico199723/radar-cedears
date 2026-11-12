@@ -45,12 +45,16 @@ jobs:
           else
             YEARS=10
           fi
-          python scripts/backtest.py --years "$YEARS" --variant baseline --out backtest-out/base --fee-bps 5 --slippage-bps 10
-          python scripts/backtest.py --years "$YEARS" --variant prudente --out backtest-out/prudente --fee-bps 5 --slippage-bps 10
+          python scripts/backtest.py --years "$YEARS" --variant baseline --data-cache backtest-out/market --out backtest-out/base --fee-bps 5 --slippage-bps 10
+          python scripts/backtest.py --years "$YEARS" --variant prudente --data-cache backtest-out/market --out backtest-out/prudente --fee-bps 5 --slippage-bps 10
           python scripts/comparar_macro.py
       - name: Guardar resultados (sin commit, sin publicar en Pages)
         uses: actions/upload-artifact@v4
         with:
           name: backtest-base-resultado
-          path: backtest-out/
+          path: |
+            backtest-out/base/
+            backtest-out/prudente/
+            backtest-out/comparacion.json
+            backtest-out/market/manifest.json
           retention-days: 30
