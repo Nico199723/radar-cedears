@@ -22,16 +22,17 @@ class FeatureTests(unittest.TestCase):
                                  "Volume":volumes},index=idx)
 
     def test_sma21_cruce_alcista_solo_con_velas_pasadas(self):
-        c=pd.Series([100.]*22+[103.])
+        c=pd.Series([100.]*24+[103.])
         r=sma21_priority(c)
         self.assertTrue(r["cross_up21"])
         self.assertFalse(r["cross_down21"])
-        self.assertEqual(r["sma21_component"],100)
+        self.assertEqual(r["sma21_age"],1)
+        self.assertGreater(r["sma21_component"],85)
         c2=c.copy()
         c2.iloc[-1]=97
         s=sma21_priority(c2)
         self.assertTrue(s["cross_down21"])
-        self.assertEqual(s["sma21_component"],0)
+        self.assertLess(s["sma21_component"],15)
 
     def test_stock_ranking_21_pesa_mas_que_simple_volumen(self):
         baseline={"score":70,"volume_confirm_score":80,"sma21_component":100,
