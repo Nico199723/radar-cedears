@@ -35,7 +35,7 @@ class UIUpgradeTests(unittest.TestCase):
 
     def test_rule_change_gated_pending_backtest(self):
         self.assertTrue(ENABLE_CAUTION_ENTRIES)
-        self.assertIn("if ENABLE_CAUTION_ENTRIES and val:",self.updater)
+        self.assertIn('if ENABLE_CAUTION_ENTRIES and val and val.get("asset_kind")=="ACCION":',self.updater)
         self.assertIn("cautious_signal",self.updater)
 
     def test_volume_rank_not_replaces_legacy_signal_score(self):
