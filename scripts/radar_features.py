@@ -123,12 +123,21 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
                 "Fortaleza individual por encima de SMA21/50/200, pero faltan "
                 "confirmaciones para asumir riesgo en mercado adverso")
         return base_signal, "neutral", None
-    gate=bool(row.get("cross_up21") or row.get("near20") or row.get("breakout"))
+    # Continuación controlada: más de una acción cruza SMA21 días antes del
+    # corte. Sin esto, exige un evento de una sola vela y bloquea líderes.
+    # >=0 y <=1 ATR de SMA20, volumen >=90% y OBV alcista: anti-persecución.
+    continuation=(
+        row["stretch_atr20"]>=0 and row["stretch_atr20"]<=1.0
+        and row["rvol20"]>=.90 and row["rsi14d"]<=64
+        and row.get("rank_score") is not None and row["rank_score"]>=70
+    )
+    gate=bool(row.get("cross_up21") or row.get("near20")
+              or row.get("breakout") or continuation)
     if not gate:
         return "VIGILAR COMPRA · MACRO", "wait", (
-            "Hay fuerza, volumen y estructura semanal, pero falta cruce/retroceso/ruptura de entrada")
+            "Hay fuerza, volumen y estructura semanal, pero falta cruce/retroceso/continuación válida")
     return "COMPRA CON PRECAUCIÓN", "wait", (
-        "SPY/QQQ débiles NO bloquean la excepción: confirmar gatillo SMA21/volumen "
+        "SPY/QQQ débiles NO bloquean la excepción: SMA21 o continuación a <=1 ATR "
         "y asumir riesgo acotado en 40/35/25 con tope simulado USD 120, reserva >=70%, stop "
         "de referencia 6% (los gaps pueden superar el stop); sin orden automática")
 
