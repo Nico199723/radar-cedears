@@ -33,8 +33,11 @@ class UIUpgradeTests(unittest.TestCase):
         self.assertIn("j.top5=[];",self.js)
         self.assertIn("const batchStale=",self.js)
 
-    def test_rule_change_gated_pending_backtest(self):
-        self.assertFalse(ENABLE_CAUTION_ENTRIES)
+    def test_macro_exception_enabled_with_risk_controls(self):
+        self.assertTrue(ENABLE_CAUTION_ENTRIES)
+        self.assertIn("risk_policy(macro,vixvalue)",self.updater)
+        self.assertIn("COMPRA CON PRECAUCIÓN",self.html)
+        self.assertIn("reserva 70%",self.html)
         self.assertIn("if ENABLE_CAUTION_ENTRIES and val:",self.updater)
         self.assertIn("cautious_signal",self.updater)
 
