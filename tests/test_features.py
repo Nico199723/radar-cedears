@@ -70,20 +70,20 @@ class FeatureTests(unittest.TestCase):
         self.assertIsNone(ranking_score({"score":80,"volume_confirm_score":None,"sma21_component":80}))
 
     def _sample(self):
-        return {"score":85,"price":100,"ma20":99,"ma50":96,"ma200":90,
+        return {"score":85,"price":100,"ma20":99,"ma21":98,"ma50":96,"ma200":90,
                 "rsi14d":57,"rsi21w":58,"macd_hist_d":.4,"macd_hist_w":.2,
                 "rvol20":1.4,"dollar_volume20":25_000_000,"obv_up10":True,
                 "stretch_atr20":.5,"near20":True,"breakout":False,
-                "rank_score":81,"rs_verified":True,"rs_spy20":5,"rs_qqq20":4,
-                "volume_confirm_score":85}
+                "rank_score":81,"rs_verified":True,"rs_score":70,"rs_spy20":5,"rs_qqq20":4,
+                "volume_confirm_score":85,"rank_penalty":0,"sma21_age":3}
 
     def test_cautious_macro_can_find_exception(self):
         sig,_,note=cautious_signal(self._sample(),"DEFENSIVO",18,True,"ESPERAR MACRO")
         self.assertEqual(sig,"COMPRA CON PRECAUCIÓN")
-        self.assertIn("riesgo",note)
+        self.assertIn("reserva",note)
 
     def test_cautious_macro_blocks_vix_or_unknown(self):
-        for macro,vix in (("DEFENSIVO",29),("NO VERIFICADO",18),("DEFENSIVO",None)):
+        for macro,vix in (("DEFENSIVO",30),("NO VERIFICADO",18),("DEFENSIVO",None)):
             sig,_,_=cautious_signal(self._sample(),macro,vix,True,"ESPERAR MACRO")
             self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
 
@@ -98,7 +98,7 @@ class FeatureTests(unittest.TestCase):
             q=dict(d);q[k]=v
             sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
             self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
-        q=dict(d);q["near20"]=False
+        q=dict(d);q["near20"]=False;q["stretch_atr20"]=1.3
         sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
         self.assertEqual(sig,"VIGILAR COMPRA · MACRO")
 
