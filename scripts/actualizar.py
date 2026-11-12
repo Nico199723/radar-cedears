@@ -343,10 +343,13 @@ def main():
         candidate=buy_candidate(val,signal,fresh)
         # Compra requiere Score O >=70 y setup; score alto con HOLD debe
         # revelar el motivo técnico que impide entrar, no esconderse en HOLD.
-        signal,tone,why=reconcile_buy_label(val,signal,tone,why,fresh,candidate)
+        signal,tone,why=reconcile_buy_label(val,signal,tone,why,fresh,candidate,macro,vixvalue)
         if candidate["eligible"] and signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR"):
             signal,tone="VIGILAR COMPRA · SCORE","watch"
             why=why+[f"Score Oportunidad {val['rank_score']:.1f}: candidatura desde 62/100. No ejecutar sin confirmar gatillo, riesgo y macro."]
+        if signal=="COMPRA CON PRECAUCIÓN" and val and val.get("rank_score",0)>=75:
+            candidate["level"]="COMPRA PRUDENTE · SCORE ≥75"
+            candidate["blockers"]=[]
         assets.append({
             'risk_plan_paper':risk_policy(macro,vixvalue),
             'candidate':candidate,
@@ -363,6 +366,15 @@ def main():
         checked=bool(sym and sym in earnings_dates)
         a["earnings"]=earnings_dates.get(sym) if checked else None
         a["earnings_status"]=event_label(a["earnings"],checked)
+        # Balances cercanos prevalecen sobre compras por puntaje y clásicas.
+        e=a["earnings"] or {}
+        if (a["signal"] in ("COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN")
+            and e.get("days_until") is not None and 0<=e["days_until"]<=7):
+            a["reasons"].append("BALANCE en <=7 días: suspender entrada y vigilar resultado")
+            a["signal"]="VIGILAR SETUP · BALANCE"
+            a["tone"]="watch"
+            a["candidate"]["level"]="BALANCE CERCANO · NO ABRIR"
+            a["candidate"]["blockers"]=["Balance dentro de 7 días"]
     selection=top_five(assets,spy,macro)
     sectors=[]
     for sector,proxy in SECTORS.items():
@@ -375,10 +387,13 @@ def main():
                 signal,tone=candidate,candidate_tone
                 if note:why=why+[note]
         candidate=buy_candidate(val,signal,fresh)
-        signal,tone,why=reconcile_buy_label(val,signal,tone,why,fresh,candidate)
+        signal,tone,why=reconcile_buy_label(val,signal,tone,why,fresh,candidate,macro,vixvalue)
         if candidate["eligible"] and signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR"):
             signal,tone="VIGILAR COMPRA · SCORE","watch"
             why=why+[f"Score Oportunidad {val['rank_score']:.1f}: candidato para revisar; falta setup confirmado."]
+        if signal=="COMPRA CON PRECAUCIÓN" and val and val.get("rank_score",0)>=75:
+            candidate["level"]="COMPRA PRUDENTE · SCORE ≥75"
+            candidate["blockers"]=[]
         sectors.append({'sector':sector,'proxy':proxy,'signal':signal,'tone':tone,
                         'candidate':candidate,'reasons':why,'data':val})
     logging.info("Régimen %s; VIX=%s; COMPRA CON PRECAUCIÓN: %d activos / %d sectores; VIGILAR COMPRA · MACRO: %d activos",
@@ -390,14 +405,14 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.7-buy-floor-score-o-70-highscore-watch',
+          'rules_version':'1.8-buy-70-caution-above-75-safety-gates',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
           'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
                                  for label in sorted({a['signal'] for a in assets})},
           'sector_signal_counts':{label:sum(a['signal']==label for a in sectors)
                                   for label in sorted({a['signal'] for a in sectors})},
-          'note':'COMPRA CONDICIONAL / CON PRECAUCIÓN exige SIEMPRE Score Oportunidad >=70/100 y setup. Score 62–69.9: sólo vigilancia. Score >=70 sin setup se clasifica VIGILAR SETUP, con bloqueos visibles (no HOLD). La fórmula del score sigue continua; criterios técnicos conservan rank_score_signal aparte. Track record usa el mismo piso, sin reiniciar. BYMA sin validar.'},
+          'note':'Score Oportunidad >=70 obligatorio para COMPRA. Desde 75 puede habilitar COMPRA CON PRECAUCIÓN sin cruce del mismo día si mantiene medias, RSI/MACD semanal y diario, fuerza relativa, volumen/OBV, VIX<30 y sin balance próximo; de lo contrario VIGILAR SETUP con bloqueos. La fórmula de score sigue continua y el histórico paper no se reinicia. No implica orden real ni rendimiento validado OOS.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
         'assets':assets,'sectors':sectors,'top5':selection,'risk_policy_paper':risk_policy(macro,vixvalue)
