@@ -358,6 +358,49 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
 
 
 
+MIN_OPTION_SCORE=62.0
+PRIORITY_OPTION_SCORE=75.0
+
+
+def buy_candidate(row: dict | None, signal: str, fresh: bool) -> dict:
+    """Semáforo de ESTUDIO, distinto de señal operable.
+
+    Un score alto no da una orden. La ausencia de entrada indica exactamente
+    cuál confirmación falta. No modifica los stops ni el paper track record.
+    """
+    out={"eligible":False,"min_score":MIN_OPTION_SCORE,
+         "priority_score":PRIORITY_OPTION_SCORE,"level":"SIN CANDIDATURA",
+         "blockers":[]}
+    if not fresh or not row or signal.startswith(("SALIR","REDUCIR","SIN","DATOS")):
+        out["blockers"]=["Datos sin vigencia o salida activa"];return out
+    rank=row.get("rank_score")
+    if rank is None:
+        out["blockers"]=["Score Oportunidad sin calcular"];return out
+    if rank<MIN_OPTION_SCORE:
+        out["blockers"]=[f"Score {rank:.1f} por debajo del mínimo {MIN_OPTION_SCORE:.0f}"];return out
+    p,ma21,ma200=(row.get(k) for k in ("price","ma21","ma200"))
+    rsi=row.get("rsi14d")
+    macd=row.get("macd_hist_d")
+    blockers=[]
+    if not row.get("rs_verified"):blockers.append("RS frente a SPY/QQQ no verificada")
+    if p is None or ma200 is None or p<=ma200:blockers.append("Precio bajo SMA200")
+    if p is None or ma21 is None or p<=ma21:blockers.append("Aún bajo SMA21 diaria")
+    if rsi is None or not 35<rsi<75:blockers.append("RSI en extremo de riesgo")
+    if macd is None or macd<=0:blockers.append("MACD diario sin impulso positivo")
+    if row.get("dollar_volume20") is None or row["dollar_volume20"]<5_000_000:
+        blockers.append("Volumen USD promedio insuficiente")
+    out["blockers"]=blockers
+    out["eligible"]=not blockers
+    if not blockers:
+        out["level"]=("PRIORIDAD DE COMPRA · A CONFIRMAR" if rank>=PRIORITY_OPTION_SCORE
+                      else "CANDIDATA · A CONFIRMAR")
+        if not (row.get("near20") or row.get("breakout") or row.get("cross_up21")):
+            out["blockers"]=["Score favorable; falta gatillo o continuación validada"]
+    else:
+        out["level"]="SCORE ALTO · ESTRUCTURA POR CONFIRMAR"
+    return out
+
+
 def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) -> list[dict]:
     """Top para estudio, NO cinco compras forzadas. Diversifica sectores."""
     candidates=[]
