@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from radar_features import volume_profile, ranking_score, cautious_signal, top_five
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21
 from earnings import earnings_for_candidates, event_label
 
 # Se activa sólo tras contrastar baseline y candidato en datos fuera de muestra.
@@ -111,7 +111,7 @@ def last_complete_daily(df: pd.DataFrame, now: datetime) -> pd.DataFrame:
     return df
 
 
-def compute(df: pd.DataFrame, now: datetime) -> dict | None:
+def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | None:
     df = last_complete_daily(df, now)
     if len(df) < 240:
         return None
@@ -176,6 +176,7 @@ def compute(df: pd.DataFrame, now: datetime) -> dict | None:
     else:
         obj1 = obj2 = None
     volumes = volume_profile(df) if {"Volume", "High", "Low"} <= set(df.columns) else {}
+    sma21 = sma21_priority(c)
     result = {
         "date":date.isoformat(), "price":number(price,3), "ma20":number(ma20,3),
         "ma50":number(ma50,3), "ma200":number(ma200,3),
@@ -187,7 +188,9 @@ def compute(df: pd.DataFrame, now: datetime) -> dict | None:
         "invalid_usd":invalid,"target_2r":obj1,"target_3r":obj2,
     }
     result.update(volumes)
-    result["rank_score"] = ranking_score(result)
+    result.update(sma21)
+    result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)
+    result["asset_kind"] = "ACCION" if is_stock else "ETF / INDICE / NO CLASIFICADO"
     return result
 
 
@@ -199,6 +202,10 @@ def get_signal(row: dict | None, macro: str, fresh: bool) -> tuple[str,str,list[
     p, m20, m50, m200 = row["price"],row["ma20"],row["ma50"],row["ma200"]
     sc,rsiD,macdD=row["score"],row["rsi14d"],row["macd_hist_d"]
     reasons = [f"Tendencia {row['trend'].lower()}; score técnico {sc}/100", f"RSI14 diario {rsiD:.1f}, MACD diario {'positivo' if macdD>0 else 'negativo'}"]
+    if row.get("cross_up21"):
+        reasons.append("Cruce alcista confirmado del cierre diario sobre SMA21: priorizar vigilancia, no implica compra aislada")
+    elif row.get("cross_down21"):
+        reasons.append("Cruce bajista del cierre diario bajo SMA21: revisar estructura y proteger riesgo")
     bearish = p < m200 and macdD < 0 and rsiD < 40
     reduced = ((p < m50 and macdD < 0 and rsiD < 48) or sc < 30)
     bull = sc >= 73 and p > m50 > m200 and 46 <= rsiD <= 70 and macdD > 0
@@ -265,10 +272,19 @@ def main():
     now=datetime.now(timezone.utc)
     symbols=sorted({x['subyacente_usa'] for x in catalog if x['subyacente_usa']} | set(SECTORS.values()) | {'SPY','QQQ','^VIX'})
     frames=get_prices(symbols,now)
+    # Catálogo curado: excluimos ETFs y proxies frecuentes de la ponderación accionaria.
+    # La clasificación es orientativa; no sustituye confirmación del tipo de instrumento.
+    etfs=set(SECTORS.values()) | {
+        "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
+        "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
+        "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
+        "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
+    }
+    nonstocks={x["subyacente_usa"] for x in catalog if x["sector"]=="Índices y ETFs"}
     technical={}
     for sym,frame in frames.items():
         try:
-            v=compute(frame,now)
+            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks))
             if v:technical[sym]=v
         except Exception as exc:
             logging.warning("Error de cálculo %s: %s",sym,exc)
@@ -332,9 +348,9 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.0-senales-originales-volumen-ranking-v1',
+          'rules_version':'1.1-sma21-rank-stock-v1-base-signals-unchanged',
           'earnings_coverage':earnings_coverage,
-          'note':'Sólo análisis técnico USD USA. Ranking pondera RVOL/OBV (15%) sin modificar señal de entrada vigente; fechas de balances son indicativas y de cobertura parcial. CEDEAR BYMA/ratio/spread sin validar.'},
+          'note':'SMA21 para acciones: 65% score anterior, 15% volumen, 20% SMA21. ETFs mantienen 85/15. Cruces son informativos, no compras nuevas. CEDEAR BYMA/ratio/spread sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'Filtro SPY y QQQ vs SMA50, VIX <25 como habilitación inicial. Validar FED/BOJ/GEX antes de operar.'},
         'assets':assets,'sectors':sectors,'top5':selection
