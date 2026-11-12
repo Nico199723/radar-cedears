@@ -3,11 +3,13 @@ import sys
 import unittest
 from pathlib import Path
 import numpy as np
+import json
+import tempfile
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from backtest import simulate, macro_history, benchmark, historical_decisions
+from backtest import simulate, macro_history, benchmark, historical_decisions, download
 
 
 def frame(opens, closes=None, lows=None):
@@ -19,6 +21,19 @@ def frame(opens, closes=None, lows=None):
 
 
 class BacktestTests(unittest.TestCase):
+    def test_cache_historico_compartido_no_descarga_dos_veces(self):
+        f=frame([100]*270,lows=[99]*270)
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)
+            f.to_csv(folder/"AAA.csv")
+            (folder/"manifest.json").write_text(json.dumps({
+                "symbols":["AAA","BBB"],"years":5,"downloaded":["AAA"],"missing":["BBB"]}))
+            result=download(["AAA","BBB"],5,str(folder))
+            self.assertEqual(set(result),{"AAA"})
+            self.assertEqual(len(result["AAA"]),270)
+            with self.assertRaises(ValueError):
+                download(["AAA","CCC"],5,str(folder))
+
     def test_entrada_se_ejecuta_en_open_t_mas_uno(self):
         f = frame([100,105,110,120], lows=[99,104,109,119])
         signals={f.index[0]:{"signal":"COMPRA CONDICIONAL","stop":90},
