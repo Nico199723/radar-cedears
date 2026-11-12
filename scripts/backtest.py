@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from actualizar import compute, get_signal, read_catalog
+from actualizar import compute, get_signal, read_catalog, KNOWN_US_ETFS
 from radar_features import cautious_signal
 
 NY = ZoneInfo("America/New_York")
@@ -88,7 +88,8 @@ def macro_history(spy: pd.DataFrame, qqq: pd.DataFrame, vix: pd.DataFrame) -> di
 
 
 def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
-                         variant: str = 'baseline', vix_by_day: dict | None = None) -> dict:
+                         variant: str = 'baseline', vix_by_day: dict | None = None,
+                         is_stock: bool = True) -> dict:
     """Reutilizar EXACTAMENTE compute/get_signal de producción, con serie truncada en t."""
     frame = normalize(frame)
     decisions = {}
@@ -98,11 +99,11 @@ def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
             continue
         if day not in macros:
             continue
-        row = compute(frame.iloc[:pos + 1], close_time(day))
+        row = compute(frame.iloc[:pos + 1], close_time(day),is_stock=is_stock)
         if row is None:
             continue
         signal, _, _ = get_signal(row, macros[day], True)
-        if variant == "prudente":
+        if variant == "prudente" and is_stock:
             candidate, _, _ = cautious_signal(row,macros[day],
                                     (vix_by_day or {}).get(day),True,signal)
             if candidate == "COMPRA CON PRECAUCIÓN":
@@ -275,12 +276,14 @@ def main():
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
     totals = []
+    nonstocks={x["subyacente_usa"] for x in read_catalog() if x["sector"]=="Índices y ETFs"} | KNOWN_US_ETFS
     for symbol in tickers:
         if symbol not in frames:
             totals.append({"ticker": symbol, "estado": "SIN HISTÓRICO"})
             continue
         f = frames[symbol]
-        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day)
+        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day,
+                                         is_stock=(symbol not in nonstocks))
         valid = f.loc[f.index >= pd.Timestamp(start_date)]
         trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps,paper_sizing=args.paper_sizing)
         row = {"ticker": symbol, "estado": "OK", "inicio":str(curve.index[0].date()),
