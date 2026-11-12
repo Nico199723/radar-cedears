@@ -356,6 +356,50 @@ def risk_policy(market: str, vix: float | None) -> dict:
             "max_positions":4,"max_per_sector":2}
 
 
+def reconcile_buy_label(row: dict | None, signal: str, tone: str,
+                        reasons: list[str], fresh: bool,
+                        candidate: dict | None = None) -> tuple[str,str,list[str]]:
+    """Señal visible y elegibilidad: compra REAL requiere Score O >=70.
+
+    Separar 3 preguntas distintas:
+    - ¿Score suficiente para entrada?
+    - ¿Hay setup técnico completo?
+    - ¿Es sólo una oportunidad a vigilar?
+    No convertir un 90/100 automáticamente en entrada ni ocultarlo en HOLD.
+    """
+    if not fresh or row is None or signal.startswith(
+            ("SALIR","REDUCIR","DATOS","SIN")):
+        return signal,tone,reasons
+    rank=row.get("rank_score")
+    if rank is None or not math.isfinite(float(rank)):
+        if signal in ("COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN"):
+            return "ESPERAR","wait",reasons+["Compra bloqueada: Score Oportunidad sin verificar"]
+        return signal,tone,reasons
+    rank=float(rank)
+    is_buy=signal in ("COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN")
+    if is_buy and rank<MIN_BUY_SCORE:
+        explanation=(f"Compra NO habilitada: Score Oportunidad {rank:.1f}/100, "
+                     f"mínimo de entrada {MIN_BUY_SCORE:.0f}/100")
+        if rank>=MIN_OPTION_SCORE:
+            return "VIGILAR COMPRA · SCORE","watch",reasons+[explanation]
+        return "ESPERAR","wait",reasons+[explanation]
+    is_hold=signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR")
+    if is_hold and rank>=MIN_BUY_SCORE:
+        blocked=list((candidate or {}).get("blockers") or [])
+        if (candidate or {}).get("eligible"):
+            return ("VIGILAR COMPRA · SCORE","watch",reasons+
+                    [f"Score Oportunidad {rank:.1f}/100 >=70, "
+                     "pero aún falta un gatillo técnico para entrar"]+
+                    blocked)
+        return ("VIGILAR SETUP · SCORE","watch",reasons+
+                [f"Score Oportunidad {rank:.1f}/100 >=70, "
+                 "pero NO cumple el setup para comprar"]+
+                blocked)
+    if signal.startswith("VIGILAR"):
+        return signal,"watch",reasons
+    return signal,tone,reasons
+
+
 def cautious_signal(row: dict | None, market: str, vix: float | None,
                     fresh: bool, base_signal: str) -> tuple[str, str, str | None]:
     """Entrada condicional en acciones Y ETFs pese a SPY/QQQ bajo SMA50.
@@ -435,6 +479,7 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
 
 
 
+MIN_BUY_SCORE=70.0
 MIN_OPTION_SCORE=62.0
 PRIORITY_OPTION_SCORE=75.0
 
