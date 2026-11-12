@@ -31,7 +31,7 @@
       <div class="block-head">
         <div><span class="eyebrow">VOLUMEN · FORTALEZA · RIESGO MACRO</span>
           <h2 id="top5Title">Top 5 para estudiar</h2>
-          <p class="top5-desc">Ranking dinámico del subyacente USA en USD: En acciones: 65% técnico, 15% volumen y 20% SMA21; sin forzar compras. Máximo dos activos por sector.</p>
+          <p class="top5-desc">Ranking de acciones y ETFs en USD: 30% fuerza relativa SPY/QQQ, 20% volumen confirmado, SMA21 (20% acciones / 15% ETFs) y técnico. Penaliza RSI extremo, pérdida de pendiente y precio bajo SMA200.</p>
         </div>
         <span class="muted" id="top5Generated">Sin corte válido</span>
       </div>
@@ -67,7 +67,7 @@
         <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compra / vigilar</option><option value="esperar">HOLD / ESPERAR</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
         <label class="filter"><span>Ordenar</span><select id="sortFilter"><option value="score">Mejor score técnico</option><option value="worst">Peor score técnico</option><option value="ticker">Ticker A–Z</option><option value="signal">Señal de acción</option></select></label>
       </div>
-      <div class="tablebox"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>SMA21 D</th><th>RSI14 D</th><th>MACD D</th><th>Score V</th><th>RVOL20</th><th>Balance</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="10">Esperando datos del primer workflow…</td></tr></tbody></table></div>
+      <div class="tablebox"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>SMA21 D</th><th>RSI14 D</th><th>MACD D</th><th>Score O.</th><th>RVOL20</th><th>Balance</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="10">Esperando datos del primer workflow…</td></tr></tbody></table></div>
       <div class="footline"><span>Hacé clic en cualquier fila para ver la tesis, gatillo, invalidación y objetivos.</span><span>Los datos son al último cierre diario confirmado; nunca a precio CEDEAR ARS.</span></div>
     </section>
     <section id="pageSectores" class="page hidden"><div class="block-head"><div><span class="eyebrow">FUERZA RELATIVA POR ETF PROXY EN USD</span><h2>Mapa sectorial</h2></div><span class="muted">17 grupos de tu universo</span></div><div id="sectorCards" class="sector-grid"></div></section>
@@ -101,9 +101,9 @@
     <section id="pageMetodo" class="page hidden"><div class="block-head"><div><span class="eyebrow">REGLAS EXPLÍCITAS</span><h2>Cómo decidimos</h2></div></div>
       <div class="method-grid">
       <article><h3>Track record ficticio</h3><p>USD 2.000 iniciales, stops del 8% con gaps, costos y tramos 40/35/25. Las señales de compra SMA21 son experimentales solo dentro del simulador y no alteran las señales operativas del radar. El registro forward se preserva por artefactos de GitHub Actions; no implica operaciones reales.</p></article>
-      <article><h3>SMA21 diaria en acciones</h3><p>El ranking de acciones individuales pondera un 20% la relación con SMA21. Distingue cruce alcista, cruce bajista y permanencia arriba/abajo. El cruce por sí solo NO equivale a compra confirmada; la validación del motor operativo requiere backtest.</p></article>
-      <article><h3>Volumen y balances</h3><p>Score V: en ETFs sigue 85% score técnico previo y 15% volumen; en acciones se combina con 20% SMA21 diaria. RVOL20 compara volumen actual con el promedio de las 20 ruedas previas. Los balances de Yahoo son fechas indicativas; alerta a 14 y 7 días, y nunca supone que una fecha no encontrada sea ausencia de balance.</p></article>
-      <article><h3>Top 5 para estudiar</h3><p>Ranking con volumen negociado USD, distancia en ATR, fuerza 20 ruedas vs SPY y diversificación sectorial. No equivale a cinco compras habilitadas y puede incluir papeles sin gatillo.</p></article>
+      <article><h3>SMA21 diaria en acciones</h3><p>La SMA21 es un espectro (20% acciones / 15% ETFs): un cruce alcista reciente y firme vale más que 10–15 cierres seguidos arriba. Se mide la pendiente de SMA21 y la distancia en ATR. No equivale por sí solo a una señal de compra.</p></article>
+      <article><h3>Volumen y balances</h3><p>Score Oportunidad: 30% RS frente a SPY/QQQ; 20% volumen confirmado por precio y OBV; SMA21 20% en acciones/15% en ETFs; base técnica 30%/35%. Se descuentan puntos por RSI extremo, precio bajo SMA200 y pérdida de pendiente diaria de RSI/MACD, aunque sigan positivos. RVOL20 usa el promedio de las 20 ruedas anteriores. Los balances de Yahoo son fechas indicativas; alerta a 14 y 7 días, y nunca supone que una fecha no encontrada sea ausencia de balance.</p></article>
+      <article><h3>Top 5 para estudiar</h3><p>Ranking de acciones y ETFs con RS 20 ruedas vs SPY/QQQ, volumen inusual confirmado, penalizaciones y diversificación sectorial. Los scores son informativos y no cambian las señales originales. No equivale a cinco compras habilitadas y puede incluir papeles sin gatillo.</p></article>
       <article><h3>HOLD / ESPERAR</h3><p>Unifica los anteriores estados «Esperar» y «Mantener / esperar», incluso cuando el filtro macro bloquea entradas. No indica mantener una posición particular: hay que revisar tesis, precio de entrada y riesgo.</p></article>
       <article><h3>La compra no es un score</h3><p>Requiere tendencia alcista (precio &gt; SMA50 &gt; SMA200), score ≥73, RSI14 diario entre 46–70, histograma MACD positivo, mercado favorable y señal de pullback/reacción cerca de SMA20 o ruptura validada de 20 sesiones con volumen.</p></article>
       <article><h3>Macro que habilita</h3><p>Filtro automático inicial: SPY y QQQ por encima de su SMA50 y VIX menor a 25. Si está mixto, defensivo o sin validar, no se emite compra nueva. No sustituye FED, BOJ, yen carry trade ni revisión de noticias.</p></article>

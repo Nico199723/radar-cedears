@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength
 from earnings import earnings_for_candidates, event_label
 from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
 from paper_store import load_or_initialize
@@ -113,7 +113,9 @@ def last_complete_daily(df: pd.DataFrame, now: datetime) -> pd.DataFrame:
     return df
 
 
-def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | None:
+def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
+            spy_close: pd.Series | None = None,
+            qqq_close: pd.Series | None = None) -> dict | None:
     df = last_complete_daily(df, now)
     if len(df) < 240:
         return None
@@ -125,8 +127,10 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     ma20 = float(c.tail(20).mean())
     ma50 = float(c.tail(50).mean())
     ma200 = float(c.tail(200).mean())
-    rsiD = float(rsi(c, 14).iloc[-1])
-    histD = float(macd_hist(c).iloc[-1])
+    rsi_daily = rsi(c,14)
+    macd_daily = macd_hist(c)
+    rsiD = float(rsi_daily.iloc[-1])
+    histD = float(macd_daily.iloc[-1])
     roc20 = float((price / c.iloc[-21] - 1) * 100)
     vol = float(c.pct_change().tail(20).std() * np.sqrt(252) * 100)
     # Semana completa: sólo viernes cerrado, evita RSI semanal parcial.
@@ -178,7 +182,8 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     else:
         obj1 = obj2 = None
     volumes = volume_profile(df) if {"Volume", "High", "Low"} <= set(df.columns) else {}
-    sma21 = sma21_priority(c)
+    sma21 = sma21_priority(c,rsi_daily,macd_daily,volumes.get('atr14'))
+    rs = relative_strength(c,spy_close,qqq_close)
     result = {
         "date":date.isoformat(), "price":number(price,3), "ma20":number(ma20,3),
         "ma50":number(ma50,3), "ma200":number(ma200,3),
@@ -191,6 +196,7 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     }
     result.update(volumes)
     result.update(sma21)
+    result.update(rs)
     result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)
     result["asset_kind"] = "ACCION" if is_stock else "ETF / INDICE / NO CLASIFICADO"
     return result
@@ -283,10 +289,13 @@ def main():
         "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
     }
     nonstocks={x["subyacente_usa"] for x in catalog if x["sector"]=="Índices y ETFs"}
+    spy_close=last_complete_daily(frames["SPY"],now)["Close"] if "SPY" in frames else None
+    qqq_close=last_complete_daily(frames["QQQ"],now)["Close"] if "QQQ" in frames else None
     technical={}
     for sym,frame in frames.items():
         try:
-            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks))
+            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks),
+                      spy_close=spy_close,qqq_close=qqq_close)
             if v:technical[sym]=v
         except Exception as exc:
             logging.warning("Error de cálculo %s: %s",sym,exc)
@@ -350,10 +359,10 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.1-sma21-rank-stock-v1-base-signals-unchanged',
+          'rules_version':'1.4-ranking-only-sma21-rsi-macd-rs-volume-original-signals',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
-          'note':'SMA21 para acciones: 65% score anterior, 15% volumen, 20% SMA21. ETFs mantienen 85/15. Cruces son informativos, no compras nuevas. CEDEAR BYMA/ratio/spread sin validar.'},
+          'note':'Ranking informativo nuevo: RS SPY/QQQ 30%, volumen confirmado 20%, SMA21 edad y pendiente 20% acciones/15% ETFs, técnico 30/35%; penaliza RSI extremo, pérdida pendiente RSI/MACD y cotización bajo SMA200. Señales de compra/venta originales intactas, pendiente backtest OOS. BYMA/ratio/spread sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'Filtro SPY y QQQ vs SMA50, VIX <25 como habilitación inicial. Validar FED/BOJ/GEX antes de operar.'},
         'assets':assets,'sectors':sectors,'top5':selection
