@@ -7,10 +7,11 @@ const esc=v=>String(v==null?'—':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 const usd=v=>(v==null||!Number.isFinite(Number(v)))?'—':'US$ '+Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:3});
 const fmt=v=>(v==null||!Number.isFinite(Number(v)))?'—':Number(v).toLocaleString('es-AR',{maximumFractionDigits:2});
 const tone=t=>(['up','down','wait','hold','neutral'].includes(t)?t:'neutral');
-const badge=(s,t)=>`<span class="pill ${tone(t)}">${esc(s||'SIN DATOS')}</span>`;
+const signalLabel=s=>s==='MANTENER / ESPERAR'||s==='ESPERAR'?'HOLD / ESPERAR':s==='ESPERAR MACRO'?'HOLD / ESPERAR · MACRO':s;
+const badge=(s,t)=>`<span class="pill ${tone(t)}">${esc(signalLabel(s||'SIN DATOS'))}</span>`;
 const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=72?'good':v<35?'bad':''}">${esc(v)}</span>`;
 const day=(s)=>{if(!s)return '—';try{return new Date(s+'T12:00:00').toLocaleDateString('es-AR')}catch(e){return s}};
-const group=s=>{s=String(s||'');if(s.includes('COMPRA')||s.includes('VIGILAR'))return 'compra';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'mantener';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
+const group=s=>{s=String(s||'');if(s.includes('COMPRA')||s.includes('VIGILAR'))return 'compra';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'esperar';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
 function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['sectores','pageSectores'],['cartera','pageCartera'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
 function baseline(){return {meta:{source:'Catálogo local · pendiente de ejecución inicial',universe_size:0,mapped_us:0,download_coverage:0},macro:{state:'NO VERIFICADO'},assets:[],sectors:[]}}
 function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];const generated=m.generated_at_ar?new Date(m.generated_at_ar):null;const age=generated?(Date.now()-generated.getTime())/(3600000):9999;const coverage=Number(m.download_coverage||0);
@@ -31,7 +32,7 @@ function fillFilters(){const ss=[...new Set((dataset.assets||[]).map(x=>x.sector
  $('sectorFilter').innerHTML='<option value="">Todos los sectores</option>'+ss.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');}
 function renderAssets(){const q=$('searchInput').value.toLowerCase().trim(),sector=$('sectorFilter').value,sig=$('signalFilter').value,sort=$('sortFilter').value;
  let arr=(dataset.assets||[]).filter(x=>(!q||(x.ticker||'').toLowerCase().includes(q)||(x.usa||'').toLowerCase().includes(q)||(x.sector||'').toLowerCase().includes(q))&&(!sector||x.sector===sector)&&(!sig||group(x.signal)===sig));
- const importance=x=>({compra:0,mantener:1,esperar:2,venta:3,sindatos:4}[group(x.signal)]??5);
+ const importance=x=>({compra:0,esperar:1,venta:2,sindatos:3}[group(x.signal)]??5);
  arr.sort((a,b)=>sort==='ticker'?a.ticker.localeCompare(b.ticker):sort==='worst'?(a.data?.score??200)-(b.data?.score??200):sort==='signal'?importance(a)-importance(b)||(b.data?.score??-1)-(a.data?.score??-1):(b.data?.score??-1)-(a.data?.score??-1));
  $('rowCount').textContent=arr.length+' / '+(dataset.assets||[]).length+' instrumentos';
  const visible=arr.slice(0,400);
@@ -55,6 +56,39 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  ${isAsset?`<div class="detail-buttons"><button id="trackingButton" class="btn">${tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista'}</button><button id="goSheet" class="btn btn-outline">Ver reglas</button></div>`:''}`;
 }
 function openDetails(type,key){const x=type==='asset'?(dataset.assets||[]).find(v=>v.ticker===key):(dataset.sectors||[]).find(v=>v.sector===key);if(!x)return;selected={type,key};$('detailBody').innerHTML=detailContent(x,type);$('detailModal').showModal();const b=$('trackingButton');if(b)b.onclick=()=>{if(tracked.has(x.ticker))tracked.delete(x.ticker);else tracked.add(x.ticker);try{localStorage.setItem(storeKey,JSON.stringify([...tracked]))}catch(e){}renderHeader();renderTracked();b.textContent=tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista';};if($('goSheet'))$('goSheet').onclick=()=>{ $('detailModal').close();setTab('metodo')};}
+// Humor editorial visible; no depende del motor, precios ni datos privados.
+const martinQuotes=[
+  'Martín compró ASTS para ir a la Luna. El -40% lo dejó en el subsuelo.',
+  'Martín no promedia a la baja: está haciendo turismo por todos los pisos.',
+  'Cuando Martín dice «es una corrección sana», el broker pide certificado médico.',
+  'ASTS prometía conexión satelital. Martín terminó buscando señal en el sótano.',
+  'Su stop loss no saltó. Aparentemente pidió vacaciones sin avisar.',
+  'Martín no busca el piso: está financiando una excavación arqueológica.',
+  'El RSI de ASTS estaba sobrevendido. El optimismo de Martín, sobrecomprado.',
+  'Martín compró la ruptura. La que se rompió fue la calculadora del rendimiento.',
+  'En su diccionario HODL significa «Hoy Otra Derrota Latente».',
+  'Martín miró el MACD; el MACD vio el -40% y bajó la vista.',
+  'La tesis era espacial. El gráfico eligió minería subterránea.',
+  'Cuando Martín dijo «voy largo», nadie sabía que hablaba del tiempo de recuperación.'
+];
+let martinIndex=0;
+function showMartinQuote(index){
+  const label=$('martinQuote'),counter=$('martinCount');
+  if(!label||!counter)return;
+  martinIndex=((index%martinQuotes.length)+martinQuotes.length)%martinQuotes.length;
+  label.textContent='«'+martinQuotes[martinIndex]+'»';
+  counter.textContent=String(martinIndex+1).padStart(2,'0')+' / '+String(martinQuotes.length).padStart(2,'0');
+  counter.setAttribute('aria-label','Frase '+(martinIndex+1)+' de '+martinQuotes.length);
+}
+if($('martinNext')){
+  $('martinNext').addEventListener('click',()=>showMartinQuote(martinIndex+1));
+  showMartinQuote(0);
+  const reduceMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduceMotion)window.setInterval(()=>{
+    if(!document.hidden)showMartinQuote(martinIndex+1);
+  },12000);
+}
+
 async function load(){dataset=baseline();try{const r=await fetch('./data.json?refresh='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!Array.isArray(j.assets)||!Array.isArray(j.sectors))throw new Error('Formato inválido');
  // Si falla GitHub Actions y el sitio quedó con datos de una ejecución vieja,
  // se BLOQUEAN las señales de compra/venta, no alcanza sólo con un aviso arriba.
