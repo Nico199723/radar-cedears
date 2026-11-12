@@ -199,21 +199,47 @@ def benchmark(benchmark_frame: pd.DataFrame, index: pd.DatetimeIndex,
             "max_drawdown_pct": round(max_drawdown(eq), 2)}
 
 
-def download(symbols: list[str], years: int) -> dict[str, pd.DataFrame]:
+def download(symbols: list[str], years: int, cache_dir: str | None = None) -> dict[str, pd.DataFrame]:
+    """Una única descarga y caché INMUTABLE compartida por ambas variantes del test.
+
+    El manifest se escribe al final. Si existe, jamás se reconsulta Yahoo para
+    evitar diferencias temporales y universos inconsistentes entre ejecuciones.
+    """
+    cache=Path(cache_dir) if cache_dir else None
+    if cache and (cache/"manifest.json").exists():
+        manifest=json.loads((cache/"manifest.json").read_text(encoding="utf-8"))
+        if manifest.get("symbols")!=symbols or manifest.get("years")!=years:
+            raise ValueError("Caché corresponde a otros parámetros/universo")
+        out={}
+        for ticker in manifest["downloaded"]:
+            fname=cache/(ticker.replace("^","_IDX_")+".csv")
+            out[ticker]=normalize(pd.read_csv(fname,index_col=0,parse_dates=True))
+        return out
     import yfinance as yf
-    start = (datetime.now(NY).date() - timedelta(days=int(years * 365.25) + 550)).isoformat()
-    downloaded = {}
-    for off in range(0, len(symbols), 12):
-        batch = symbols[off:off+12]
-        data = yf.download(batch, start=start, interval="1d", group_by="ticker",
-                           auto_adjust=True, threads=4, progress=False, timeout=30)
+    start=(datetime.now(NY).date()-timedelta(days=int(years*365.25)+550)).isoformat()
+    downloaded={}
+    for off in range(0,len(symbols),12):
+        batch=symbols[off:off+12]
+        # Yahoo puede fallar para un ticker concreto: los faltantes se registran,
+        # y no deben reaparecer solamente en la segunda estrategia.
+        data=yf.download(batch,start=start,interval="1d",group_by="ticker",
+                         auto_adjust=True,threads=2,progress=False,timeout=30)
         for ticker in batch:
             try:
-                f = data[ticker].copy() if isinstance(data.columns, pd.MultiIndex) else data.copy()
-                if len(f.dropna(subset=["Close"])) >= 240:
-                    downloaded[ticker] = normalize(f)
-            except (KeyError, TypeError, ValueError):
+                f=data[ticker].copy() if isinstance(data.columns,pd.MultiIndex) else data.copy()
+                if len(f.dropna(subset=["Close"]))>=240:
+                    downloaded[ticker]=normalize(f)
+            except (KeyError,TypeError,ValueError):
                 pass
+    if cache:
+        cache.mkdir(parents=True,exist_ok=True)
+        for ticker,frame in downloaded.items():
+            frame.to_csv(cache/(ticker.replace("^","_IDX_")+".csv"))
+        (cache/"manifest.json").write_text(json.dumps({
+            "symbols":symbols,"years":years,"downloaded":list(downloaded),
+            "missing":[s for s in symbols if s not in downloaded],
+            "downloaded_at":datetime.now(NY).isoformat()
+        },indent=2),encoding="utf-8")
     return downloaded
 
 
@@ -226,11 +252,12 @@ def main():
     p.add_argument("--fee-bps", type=float, default=5.0)
     p.add_argument("--slippage-bps", type=float, default=10.0)
     p.add_argument("--out", default="backtest-out", help="Carpeta fuera de docs/")
+    p.add_argument("--data-cache", default=None, help="Directorio de OHLCV compartido")
     args = p.parse_args()
     tickers = [x.strip().upper() for x in args.tickers.split(",") if x.strip()]
     if any(t not in {x["subyacente_usa"] for x in read_catalog()} for t in tickers):
         p.error("Usar sólo símbolos de subyacentes USA incluidos en config/universo.csv")
-    frames = download(sorted(set(tickers + ["SPY", "QQQ", "^VIX"])), args.years)
+    frames = download(sorted(set(tickers + ["SPY", "QQQ", "^VIX"])), args.years,args.data_cache)
     required = ("SPY", "QQQ", "^VIX")
     if any(x not in frames for x in required):
         raise SystemExit("No hay macro completa SPY/QQQ/VIX; NO ejecutar señales de compra")
