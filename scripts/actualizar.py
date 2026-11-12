@@ -23,6 +23,8 @@ import pandas as pd
 
 from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21
 from earnings import earnings_for_candidates, event_label
+from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
+from paper_store import load_or_initialize
 
 # Se activa sólo tras contrastar baseline y candidato en datos fuera de muestra.
 ENABLE_CAUTION_ENTRIES = False
@@ -349,12 +351,29 @@ def main():
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
           'rules_version':'1.1-sma21-rank-stock-v1-base-signals-unchanged',
+          'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
           'note':'SMA21 para acciones: 65% score anterior, 15% volumen, 20% SMA21. ETFs mantienen 85/15. Cruces son informativos, no compras nuevas. CEDEAR BYMA/ratio/spread sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'Filtro SPY y QQQ vs SMA50, VIX <25 como habilitación inicial. Validar FED/BOJ/GEX antes de operar.'},
         'assets':assets,'sectors':sectors,'top5':selection
     }
+    # Forward-paper: cada run restaura un ledger previo, nunca inventa fills del pasado.
+    if spy is None or not is_fresh(spy):
+        raise SystemExit("No hay SPY reciente para cierre de cartera simulada; no reiniciar ledger")
+    paper_frames={sym:last_complete_daily(frame,now) for sym,frame in frames.items()}
+    latest_day=spy["date"]
+    state=load_or_initialize(latest_day,now.isoformat(timespec="seconds"))
+    state=process_ledger(state,paper_frames,assets,macro,vixvalue,latest_day)
+    paper_public=public_summary(state,paper_frames)
+    result["meta"]["paper_snapshot_day"]=latest_day
+    state_path=ROOT/".paper"/"ledger.json"
+    state_path.parent.mkdir(parents=True,exist_ok=True)
+    state_tmp=state_path.with_suffix(".json.tmp")
+    state_tmp.write_text(json.dumps(state,ensure_ascii=False,allow_nan=False),encoding="utf-8")
+    state_tmp.replace(state_path)
+    public_path=ROOT/"docs"/"paper.json"
+    public_path.write_text(json.dumps(paper_public,ensure_ascii=False,allow_nan=False),encoding="utf-8")
     OUT.parent.mkdir(parents=True,exist_ok=True)
     tmp=OUT.with_suffix('.json.tmp')
     tmp.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False),encoding='utf-8')
