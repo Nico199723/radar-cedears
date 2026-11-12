@@ -6,9 +6,9 @@ try{tracked=new Set(JSON.parse(localStorage.getItem(storeKey)||'[]'));}catch(e){
 const esc=v=>String(v==null?'—':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const usd=v=>(v==null||!Number.isFinite(Number(v)))?'—':'US$ '+Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:3});
 const fmt=v=>(v==null||!Number.isFinite(Number(v)))?'—':Number(v).toLocaleString('es-AR',{maximumFractionDigits:2});
-const tone=t=>(['up','down','wait','hold','neutral'].includes(t)?t:'neutral');
+const tone=t=>(['up','caution','watch','down','wait','hold','neutral'].includes(t)?t:'neutral');
 const signalLabel=s=>s==='MANTENER / ESPERAR'||s==='ESPERAR'?'HOLD / ESPERAR':s==='ESPERAR MACRO'?'HOLD / ESPERAR · MACRO':s;
-const badge=(s,t)=>`<span class="pill ${tone(t)}">${esc(signalLabel(s||'SIN DATOS'))}</span>`;
+const badge=(s,t)=>{const kind=s==='COMPRA CONDICIONAL'?'up':s==='COMPRA CON PRECAUCIÓN'?'caution':String(s||'').startsWith('VIGILAR COMPRA')?'watch':tone(t);return `<span class="pill ${kind}">${esc(signalLabel(s||'SIN DATOS'))}</span>`;};
 const eventHtml=x=>{
  const e=x?.earnings, n=e?.days_until;
  if(typeof n==='number'&&n>=0&&n<=14){
@@ -19,7 +19,7 @@ const eventHtml=x=>{
 };
 const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=72?'good':v<35?'bad':''}">${esc(v)}</span>`;
 const day=(s)=>{if(!s)return '—';try{return new Date(s+'T12:00:00').toLocaleDateString('es-AR')}catch(e){return s}};
-const group=s=>{s=String(s||'');if(s.includes('COMPRA')||s.includes('VIGILAR'))return 'compra';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'esperar';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
+const group=s=>{s=String(s||'');if(s==='COMPRA CONDICIONAL'||s==='COMPRA CON PRECAUCIÓN')return 'compra';if(s.startsWith('VIGILAR COMPRA'))return 'vigilancia';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'esperar';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
 function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['sectores','pageSectores'],['cartera','pageCartera'],['simulador','pageSimulador'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
 function baseline(){return {meta:{source:'Catálogo local · pendiente de ejecución inicial',universe_size:0,mapped_us:0,download_coverage:0},macro:{state:'NO VERIFICADO'},assets:[],sectors:[]}}
 function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];const generated=m.generated_at_ar?new Date(m.generated_at_ar):null;const age=generated?(Date.now()-generated.getTime())/(3600000):9999;const coverage=Number(m.download_coverage||0);
@@ -30,7 +30,8 @@ function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];cons
  $('macroValue').textContent=dataset.macro?.state||'—';$('macroValue').style.color=dataset.macro?.state==='FAVORABLE'?'#5ee1c2':dataset.macro?.state==='DEFENSIVO'?'#f27b80':'#f6c16b';
  const policy=dataset.risk_policy_paper||{};
  $('macroSub').textContent=(policy.mode==='PRUDENTE'?'PRECAUCIÓN: posición máx. US$ 120 · reserva 70% · stop 6% · ':policy.mode==='NORMAL'?'NORMAL: posición máx. US$ 250 · reserva 50% · stop 8% · ':'SIN NUEVAS COMPRAS: datos macro/VIX · ')+(dataset.macro?.vix!=null?'VIX '+fmt(dataset.macro.vix):'sin VIX verificable');
- $('buyCount').textContent=a.filter(x=>group(x.signal)==='compra').length;$('assetCount').textContent=m.universe_size||a.length;
+ const ready=a.filter(x=>group(x.signal)==='compra').length,watch=a.filter(x=>group(x.signal)==='vigilancia').length;
+ $('buyCount').textContent=ready;$('buyCaption').textContent=watch+' candidatas en vigilancia (no son compras)';$('assetCount').textContent=m.universe_size||a.length;
  $('mappedCount').textContent=(m.mapped_us||0)+' con subyacente USA candidato';$('coverageCount').textContent=generated?fmt(coverage)+'%':'Sin datos';
  $('heroLast').textContent=generated?'Último procesamiento: '+new Date(m.generated_at_ar).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}):'Pendiente de primer corte';
  $('footerSource').textContent=(m.source||'Sin fuente')+' · '+(m.generated_at_ar?'corte '+new Date(m.generated_at_ar).toLocaleString('es-AR'):'sin datos');
@@ -41,11 +42,11 @@ function fillFilters(){const ss=[...new Set((dataset.assets||[]).map(x=>x.sector
  $('sectorFilter').innerHTML='<option value="">Todos los sectores</option>'+ss.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');}
 function renderAssets(){const q=$('searchInput').value.toLowerCase().trim(),sector=$('sectorFilter').value,sig=$('signalFilter').value,sort=$('sortFilter').value;
  let arr=(dataset.assets||[]).filter(x=>(!q||(x.ticker||'').toLowerCase().includes(q)||(x.usa||'').toLowerCase().includes(q)||(x.sector||'').toLowerCase().includes(q))&&(!sector||x.sector===sector)&&(!sig||group(x.signal)===sig));
- const importance=x=>({compra:0,esperar:1,venta:2,sindatos:3}[group(x.signal)]??5);
- arr.sort((a,b)=>sort==='ticker'?a.ticker.localeCompare(b.ticker):sort==='worst'?(a.data?.rank_score??a.data?.score??200)-(b.data?.rank_score??b.data?.score??200):sort==='signal'?importance(a)-importance(b)||(b.data?.score??-1)-(a.data?.score??-1):(b.data?.rank_score??b.data?.score??-1)-(a.data?.rank_score??a.data?.score??-1));
+ const importance=x=>({compra:0,vigilancia:1,esperar:2,venta:3,sindatos:4}[group(x.signal)]??5);
+ arr.sort((a,b)=>sort==='ticker'?a.ticker.localeCompare(b.ticker):sort==='worst'?(a.data?.rank_score??a.data?.score??200)-(b.data?.rank_score??b.data?.score??200):sort==='priority'||sort==='signal'?importance(a)-importance(b)||(b.data?.rank_score??-1)-(a.data?.rank_score??-1):(b.data?.rank_score??b.data?.score??-1)-(a.data?.rank_score??a.data?.score??-1));
  $('rowCount').textContent=arr.length+' / '+(dataset.assets||[]).length+' instrumentos';
  const visible=arr.slice(0,400);
- $('assetRows').innerHTML=visible.length?visible.map(x=>`<tr tabindex="0" data-ticker="${esc(x.ticker)}"><td>${esc(x.ticker)}<span class="ticker-sub">USA: ${esc(x.usa||'NO APLICA')} · ${esc(x.sector)}</span></td><td>${usd(x.data?.price)}</td><td><span class="${x.data?.cross_up21?'sma21-up':x.data?.cross_down21?'sma21-down':'muted'}">${usd(x.data?.ma21)}</span><span class="ticker-sub">${esc(x.data?.sma21_state||'—')}</span></td><td>${fmt(x.data?.rsi14d)}</td><td>${x.data?.macd_hist_d==null?'—':fmt(x.data?.macd_hist_d)}</td><td><span title="${esc((x.data?.rank_penalty_reasons||[]).join(' · ')||'Sin penalizaciones')}">${barScore(x.data?.rank_score)}</span></td><td>${fmt(x.data?.rvol20)}x</td><td>${eventHtml(x)}</td><td>${esc(x.data?.trend||'NO VERIFICADO')}</td><td>${badge(x.signal,x.tone)}</td></tr>`).join(''):'<tr><td colspan="10" style="padding:30px">No hay resultados para estos filtros.</td></tr>';
+ $('assetRows').innerHTML=visible.length?visible.map(x=>`<tr tabindex="0" data-ticker="${esc(x.ticker)}"><td>${esc(x.ticker)}<span class="ticker-sub">USA: ${esc(x.usa||'NO APLICA')} · ${esc(x.sector)}</span></td><td>${usd(x.data?.price)}</td><td><span class="${x.data?.cross_up21?'sma21-up':x.data?.cross_down21?'sma21-down':'muted'}">${usd(x.data?.ma21)}</span><span class="ticker-sub">${esc(x.data?.sma21_state||'—')}</span></td><td>${fmt(x.data?.rsi14d)}</td><td>${x.data?.macd_hist_d==null?'—':fmt(x.data?.macd_hist_d)}</td><td><span title="${esc((x.data?.rank_penalty_reasons||[]).join(' · ')||'Sin penalizaciones')}">${barScore(x.data?.rank_score)}</span><span class="ticker-sub">${esc(x.candidate?.level||x.data?.rank_level||'')}</span></td><td>${fmt(x.data?.rvol20)}x</td><td>${eventHtml(x)}</td><td>${esc(x.data?.trend||'NO VERIFICADO')}</td><td>${badge(x.signal,x.tone)}</td></tr>`).join(''):'<tr><td colspan="10" style="padding:30px">No hay resultados para estos filtros.</td></tr>';
  $('assetRows').querySelectorAll('tr[data-ticker]').forEach(el=>{const act=()=>openDetails('asset',el.dataset.ticker);el.onclick=act;el.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act()}}});}
 function renderTop5(){
  const root=$('top5Cards');
@@ -54,9 +55,9 @@ function renderTop5(){
  if(!arr.length){root.innerHTML='<p class="muted">No hay ranking confiable en este corte. Verificá la actualización y la liquidez.</p>';return;}
  root.innerHTML=arr.map((x,i)=>`<article class="top5-card" data-top5="${esc(x.ticker)}" tabindex="0" role="button" aria-label="Ver ficha de ${esc(x.ticker)}">
   <div class="top5-heading"><span class="top5-number">${i+1}</span><div><h3>${esc(x.ticker)} <small>${esc(x.usa)}</small></h3><small>${esc(x.sector)}</small></div><strong class="top5-score">${esc(x.rank_score)}<span>/100</span></strong></div>
-  <div class="top5-pills"><span class="top5-tag">${esc(x.tag)}</span>${eventHtml(x)}</div>
+  <div class="top5-pills"><span class="top5-tag">${esc(x.tag)}</span>${badge(x.signal)}${eventHtml(x)}</div>
   <div class="top5-stats"><div><span>Último cierre USD</span><strong>${usd(x.price)}</strong></div><div><span>SMA21 diario</span><strong>${usd(x.ma21)}</strong></div><div><span>RVOL20</span><strong>${fmt(x.rvol20)}x</strong></div><div><span>RS vs SPY (20r)</span><strong>${x.relative_spy20==null?'—':fmt(x.relative_spy20)+' pp'}</strong></div><div><span>RS vs QQQ (20r)</span><strong>${x.relative_qqq20==null?'—':fmt(x.relative_qqq20)+' pp'}</strong></div><div><span>Penalización</span><strong>${x.rank_penalty?'−'+fmt(x.rank_penalty)+' pts':'0 pts'}</strong></div><div><span>Invalidación ref.</span><strong>${usd(x.invalid_usd)}</strong></div></div>
-  <div class="top5-footer"><span>${esc(signalLabel(x.signal))}</span><span>Ver ficha ›</span></div>
+  <div class="top5-footer"><span>${esc(x.candidate?.level||x.rank_level||'Revisar setup')}</span><span>Ver ficha ›</span></div>
  </article>`).join('');
  root.querySelectorAll('[data-top5]').forEach(el=>{
    const act=()=>openDetails('asset',el.dataset.top5);
@@ -75,6 +76,11 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  if(x.signal==='COMPRA CON PRECAUCIÓN')plan='Macro adverso: NO impide operar con fuerza propia. Papel simulado hasta US$ 120, reserva del 70%, stop de referencia 6% y máximo 2 posiciones; primer tramo del 40% y los restantes sólo con confirmación. Los gaps pueden superar el stop.';
  const earnings=x.earnings||null;
  const balanceInfo=isAsset?'<div class="detail-note"><strong>Próximo balance:</strong> '+(earnings ? esc(day(earnings.date)+' (dentro de '+earnings.days_until+' días) — '+earnings.status) : esc(x.earnings_status||'Fecha sin verificar'))+'. Fuente: Yahoo Finance (fecha indicativa, contrastar en IR). No es un bloqueo automático.</div>':'';
+ const status=x.candidate||{};
+ const candidateInfo='<div class="detail-note"><strong>Elegibilidad por puntaje:</strong> '
+   +esc(status.level||'Sin clasificación')+' · mínimo 62/100 para vigilancia, 75/100 prioridad de estudio. '
+   +'<strong>Condiciones pendientes:</strong> '+esc((status.blockers||[]).join(' · ')||'ninguna identificada')
+   +'. El puntaje no es un gatillo ni orden de compra.</div>';
  const penalties=Array.isArray(d.rank_penalty_reasons)?d.rank_penalty_reasons:[];
  const penaltyInfo='<div class="detail-note"><strong>Score Oportunidad:</strong> '
     +esc(d.rank_score==null?'Sin datos':d.rank_score+'/100')
@@ -95,7 +101,7 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  <div class="detail-metric"><label>MACD hist. · Δ 3r</label><strong class="${d.macd_delta3_pct<0?'sma21-down':'sma21-up'}">${d.macd_delta3_pct==null?'—':fmt(d.macd_delta3_pct)+'% del precio'}</strong></div><div class="detail-metric"><label>SMA20 · USD</label><strong>${usd(d.ma20)}</strong></div><div class="detail-metric"><label>SMA50 · USD</label><strong>${usd(d.ma50)}</strong></div><div class="detail-metric"><label>SMA200 · USD</label><strong>${usd(d.ma200)}</strong></div><div class="detail-metric"><label>RSI14 diario</label><strong>${fmt(d.rsi14d)}</strong></div><div class="detail-metric"><label>MACD hist. D</label><strong>${fmt(d.macd_hist_d)}</strong></div><div class="detail-metric"><label>RSI21 semanal</label><strong>${fmt(d.rsi21w)}</strong></div><div class="detail-metric"><label>RSI21 mensual</label><strong>${fmt(d.rsi21m)}</strong></div><div class="detail-metric"><label>ADX14 diario</label><strong>${fmt(d.adx14)}</strong></div><div class="detail-metric"><label>RS vs SPY (20r)</label><strong>${d.rs_spy20==null?'—':fmt(d.rs_spy20)+' pp'}</strong></div><div class="detail-metric"><label>RS vs QQQ (20r)</label><strong>${d.rs_qqq20==null?'—':fmt(d.rs_qqq20)+' pp'}</strong></div><div class="detail-metric"><label>Volumen confirmado</label><strong>${fmt(d.volume_confirm_score)}/100</strong></div><div class="detail-metric"><label>RVOL20</label><strong>${fmt(d.rvol20)}x</strong></div><div class="detail-metric"><label>Volumen 20r USD</label><strong>${d.dollar_volume20==null?'—':usd(d.dollar_volume20)}</strong></div><div class="detail-metric"><label>OBV (10 ruedas)</label><strong>${d.obv_up10==null?'—':d.obv_up10?'Confirmando':'Sin confirmar'}</strong></div><div class="detail-metric"><label>Extensión / ATR14</label><strong>${fmt(d.stretch_atr20)} ATR</strong></div></div>
  <div class="detail-section"><h3>Por qué aparece esta señal</h3><ul>${what.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>
  <div class="detail-section"><h3>Plan informativo / control de riesgo</h3><p>${esc(plan)}</p><div class="detail-metrics"><div class="detail-metric"><label>Nivel de referencia / soporte</label><strong>${usd(d.ma20)}</strong></div><div class="detail-metric"><label>Invalidación de referencia</label><strong>${usd(d.invalid_usd)}</strong></div><div class="detail-metric" style="grid-column:span 2"><label>Objetivos hipotéticos desde cierre USD</label><strong>${esc(objective)}</strong></div></div><p class="muted">La invalidación es aproximada: revisar estructura 4H/diaria y catalizadores. Los objetivos R son escenarios, no pronósticos.</p></div>
- ${penaltyInfo} ${balanceInfo} ${riskPlan} ${riskNote}<p class="muted" style="font-size:11px">Calidad: último cierre USD ${day(d.date)} · Macroeconomía: ${esc(dataset.macro?.state||'NO VERIFICADO')} · fuente: Yahoo/yfinance.</p>
+ ${candidateInfo} ${penaltyInfo} ${balanceInfo} ${riskPlan} ${riskNote}<p class="muted" style="font-size:11px">Calidad: último cierre USD ${day(d.date)} · Macroeconomía: ${esc(dataset.macro?.state||'NO VERIFICADO')} · fuente: Yahoo/yfinance.</p>
  ${isAsset?`<div class="detail-buttons"><button id="trackingButton" class="btn">${tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista'}</button><button id="goSheet" class="btn btn-outline">Ver reglas</button></div>`:''}`;
 }
 function openDetails(type,key){const x=type==='asset'?(dataset.assets||[]).find(v=>v.ticker===key):(dataset.sectors||[]).find(v=>v.sector===key);if(!x)return;selected={type,key};$('detailBody').innerHTML=detailContent(x,type);$('detailModal').showModal();const b=$('trackingButton');if(b)b.onclick=()=>{if(tracked.has(x.ticker))tracked.delete(x.ticker);else tracked.add(x.ticker);try{localStorage.setItem(storeKey,JSON.stringify([...tracked]))}catch(e){}renderHeader();renderTracked();b.textContent=tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista';};if($('goSheet'))$('goSheet').onclick=()=>{ $('detailModal').close();setTab('metodo')};}
