@@ -58,7 +58,10 @@ class PaperTests(unittest.TestCase):
         self.assertEqual(s["fills"][0]["date"],self.days[2])
         self.assertEqual(s["fills"][0]["action"],"COMPRA 1/3")
         self.assertAlmostEqual(s["fills"][0]["price_usd"],100*1.001)
-        self.assertLessEqual(INITIAL-s["cash"],100.02)
+        self.assertLessEqual(INITIAL-s["cash"],48.02)
+        self.assertGreaterEqual(s["cash"],1400)
+        self.assertEqual(s["positions"]["AAA"]["risk_mode"],"PRUDENTE")
+        self.assertAlmostEqual(s["positions"]["AAA"]["stop_pct"],.06)
         count=len(s["fills"])
         process_ledger(s,self.frames,[asset(self.days[2])],"NO VERIFICADO",None,self.days[2])
         self.assertEqual(len(s["fills"]),count)
@@ -90,13 +93,14 @@ class PaperTests(unittest.TestCase):
         a["data"]["macd_hist_w"]=-.1
         self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
 
-    def test_no_balance_or_etf_entries(self):
+    def test_balance_blocks_but_etf_may_enter(self):
         a=asset(self.days[1])
         a["earnings"]={"days_until":5}
         self.assertFalse(evaluate_entry(a,"FAVORABLE",16)[0])
         a["earnings"]=None
         a["data"]["asset_kind"]="ETF / INDICE / NO CLASIFICADO"
-        self.assertFalse(evaluate_entry(a,"FAVORABLE",16)[0])
+        self.assertTrue(evaluate_entry(a,"DEFENSIVO",18)[0])
+        self.assertTrue(evaluate_entry(a,"FAVORABLE",16)[0])
 
     def test_cash_reserve_and_four_max_slots(self):
         s=new_ledger(self.days[0],"2026-11-10T20:00:00Z")
