@@ -27,7 +27,7 @@ from paper_sim import process_ledger, public_summary, session_frame, VERSION as 
 from paper_store import load_or_initialize
 
 # Se activa sólo tras contrastar baseline y candidato en datos fuera de muestra.
-ENABLE_CAUTION_ENTRIES = False
+ENABLE_CAUTION_ENTRIES = True
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "config" / "universo.csv"
@@ -326,7 +326,14 @@ def main():
                 if note:why=why+[note]
         if not us:
             signal,tone,why='SIN SUBYACENTE USA','neutral',['No existe mapeo USD estadounidense confiable; no usar ticker homónimo']
+        prudent=macro in ("DEFENSIVO","MIXTO")
+        risk_plan=({"mode":"PRUDENTE","max_position_usd":120,
+                    "min_reserve_pct":70,"reference_stop_pct":6,"risk_at_stop_usd":7.2}
+                   if prudent else
+                   {"mode":"NORMAL","max_position_usd":250,
+                    "min_reserve_pct":50,"reference_stop_pct":8,"risk_at_stop_usd":20})
         assets.append({
+            'risk_plan_paper':risk_plan,
             'ticker':item['cedear'], 'usa':us or None, 'sector':item['sector'],
             'cedear_verificado':False, # Catálogo curado NO sustituye PDF oficial BYMA
             'estado_instrumento':'PENDIENTE VALIDAR RATIO Y LISTADO BYMA',
@@ -350,12 +357,12 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.1-sma21-rank-stock-v1-base-signals-unchanged',
+          'rules_version':'1.2-macro-excepcion-size-conservador-v1',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
-          'note':'SMA21 para acciones: 65% score anterior, 15% volumen, 20% SMA21. ETFs mantienen 85/15. Cruces son informativos, no compras nuevas. CEDEAR BYMA/ratio/spread sin validar.'},
+          'note':'Entradas con precaución se habilitan sólo por confluencia SMA21/semanal/volumen y VIX<25; en macro débil se reserva 70% y se reduce el tamaño de papel simulado. Histórico OOS de 10 activos no muestra ventaja confirmada. CEDEAR BYMA/ratio/spread sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
-                 'reason':'Filtro SPY y QQQ vs SMA50, VIX <25 como habilitación inicial. Validar FED/BOJ/GEX antes de operar.'},
+                 'reason':'SPY/QQQ bajo SMA50 implica régimen defensivo y menor sizing; puede haber compra prudente con fuerza propia, SMA21 y volumen. VIX>=25 o macro sin verificar bloquean nuevas compras. No ejecuta órdenes.'},
         'assets':assets,'sectors':sectors,'top5':selection
     }
     # Forward-paper: cada run restaura un ledger previo, nunca inventa fills del pasado.
