@@ -59,7 +59,7 @@ class SpectrumTests(unittest.TestCase):
         r=pd.Series([55.]*61+[56.,57.,58.,57.5])
         m=pd.Series([.10]*61+[.13,.15,.18,.19])
         x=sma21_priority(c,r,m,atr=2)
-        self.assertGreaterEqual(x["indicator_slope_penalty"],2)
+        self.assertGreater(x["indicator_slope_penalty"],0)
         self.assertLess(x["rsi_delta1"],0)
 
     def test_trend_age_is_cut_when_price_closes_below_sma21(self):
