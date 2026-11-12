@@ -202,13 +202,20 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
         return False,"BALANCE EN 7 DÍAS"
     if a.get("signal","").startswith(("SALIR","REDUCIR","DATOS","SIN")):
         return False,""
+    if a.get("signal")=="COMPRA CON PRECAUCIÓN" and float(score_o)>=75:
+        from radar_features import high_score_precaution
+        allowed,why=high_score_precaution(d,market,vix,True)
+        if allowed:
+            return True,"COMPRA CON PRECAUCIÓN · SCORE >=75 · EXPOSICIÓN REDUCIDA"
     if market!="FAVORABLE":
-        # Revalidar TODO el setup al cierre, nunca confiar sólo en una etiqueta.
+        # Compras con 70–74.9 sólo si cumplen gatillo completo.
         from radar_features import cautious_signal
         candidate,_,_=cautious_signal(d,market,vix,True,"ESPERAR MACRO")
         if candidate!="COMPRA CON PRECAUCIÓN" or a.get("signal")!=candidate:
             return False,""
         return True,"COMPRA CON PRECAUCIÓN · SMA21 Y VOLUMEN · TAMAÑO REDUCIDO"
+    if a.get("signal")=="COMPRA CON PRECAUCIÓN":
+        return False,""
     p,ma21,ma200=(d.get(k) for k in ("price","ma21","ma200"))
     if not all(x is not None and x>0 for x in (p,ma21,ma200)):
         return False,""
@@ -392,15 +399,19 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
             sector=a["sector"]
             if sector_slots.get(sector,0)>=policy["max_per_sector"]:continue
             leveraged=usa in {"TQQQ","SQQQ","SPXL","SOXL","SOXS","UPRO","SPXU"}
-            budget=min(policy["max_position_usd"],60 if policy["mode"]=="PRUDENTE" else 120) if leveraged else policy["max_position_usd"]
-            reserve=max(policy["reserve_usd"],1600 if policy["mode"]=="PRUDENTE" else 1200) if leveraged else policy["reserve_usd"]
-            stop=(.05 if policy["mode"]=="PRUDENTE" else .06) if leveraged else policy["stop_pct"]/100
+            cautious=a.get("signal")=="COMPRA CON PRECAUCIÓN"
+            # Incluso con macro favorable, la señal basada en score sin
+            # gatillo clásico usa tamaño prudente, nunca el nominal normal.
+            conservative=policy["mode"]=="PRUDENTE" or cautious
+            budget=min(policy["max_position_usd"],60 if conservative else 120) if leveraged else min(policy["max_position_usd"],120) if conservative else policy["max_position_usd"]
+            reserve=max(policy["reserve_usd"],1600 if conservative else 1200) if leveraged else max(policy["reserve_usd"],1400) if conservative else policy["reserve_usd"]
+            stop=(.05 if conservative else .06) if leveraged else (.06 if conservative else policy["stop_pct"]/100)
             if s["cash"]-reserve<budget*TRANCHES[0]:continue
             s["orders"].append({
                 "side":"BUY","usa":usa,"ticker":a["ticker"],
                 "sector":sector,"tranche":1,"issued_day":latest_day,
                 "reason":reason,"budget":budget,"reserve_usd":reserve,
-                "stop_pct":stop,"risk_mode":policy["mode"]+(" / ETF APALANCADO" if leveraged else ""),
+                "stop_pct":stop,"risk_mode":("PRUDENTE" if conservative else policy["mode"])+(" / ETF APALANCADO" if leveraged else ""),
                 "max_positions":policy["max_positions"],
                 "max_per_sector":policy["max_per_sector"],
             })
