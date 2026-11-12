@@ -202,7 +202,7 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
         candidate,_,_=cautious_signal(d,market,vix,True,"ESPERAR MACRO")
         if candidate!="COMPRA CON PRECAUCIÓN" or a.get("signal")!=candidate:
             return False,""
-        return True,"COMPRA CON PRECAUCIÓN · TAMAÑO REDUCIDO"
+        return True,"COMPRA CON PRECAUCIÓN · SMA21 Y VOLUMEN · TAMAÑO REDUCIDO"
     p,ma21,ma200=(d.get(k) for k in ("price","ma21","ma200"))
     if not all(x is not None and x>0 for x in (p,ma21,ma200)):
         return False,""
