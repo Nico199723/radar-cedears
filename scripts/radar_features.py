@@ -356,9 +356,49 @@ def risk_policy(market: str, vix: float | None) -> dict:
             "max_positions":4,"max_per_sector":2}
 
 
+def high_score_precaution(row: dict | None, market: str,
+                          vix: float | None, fresh: bool) -> tuple[bool,list[str]]:
+    """Una oportunidad >=75 con estructura sana habilita COMPRA CON PRECAUCIÓN.
+
+    Es distinto a señal normal: no exige ruptura en esa misma vela. Nunca
+    habilitar si falta dato, RSI extremo, volumen/RS, SMA200 o mercado verificable.
+    """
+    reasons=[]
+    if not fresh or row is None:
+        return False,["Sin cierre diario válido y reciente"]
+    if risk_policy(market,vix)["max_position_usd"]==0:
+        return False,["Macro/VIX no verificables o estrés VIX >=30"]
+    rank=row.get("rank_score")
+    if rank is None or not math.isfinite(float(rank)) or float(rank)<PRIORITY_OPTION_SCORE:
+        return False,["Score Oportunidad inferior a 75"]
+    candidate=buy_candidate(row,"ESPERAR",True)
+    if not candidate["eligible"]:
+        return False,list(candidate["blockers"])
+    rsi=row.get("rsi14d")
+    if rsi is None or not 40<=float(rsi)<=70:
+        reasons.append("RSI fuera del rango prudente 40–70")
+    wk=row.get("rsi21w")
+    macd_w=row.get("macd_hist_w")
+    if wk is None or float(wk)<45 or macd_w is None or float(macd_w)<0:
+        reasons.append("Tendencia/impulso semanal sin confirmación")
+    spread=row.get("stretch_atr20")
+    if spread is None or not -0.8<=float(spread)<=1.6:
+        reasons.append("Extensión en ATR poco favorable")
+    if row.get("obv_up10") is not True:
+        reasons.append("OBV sin confirmación alcista")
+    rvol=row.get("rvol20")
+    volume=row.get("volume_confirm_score")
+    if (rvol is None or float(rvol)<.75 or
+        volume is None or float(volume)<50):
+        reasons.append("Volumen relativo no confirma la oportunidad")
+    return not reasons,reasons
+
+
 def reconcile_buy_label(row: dict | None, signal: str, tone: str,
                         reasons: list[str], fresh: bool,
-                        candidate: dict | None = None) -> tuple[str,str,list[str]]:
+                        candidate: dict | None = None,
+                        market: str = "NO VERIFICADO",
+                        vix: float | None = None) -> tuple[str,str,list[str]]:
     """Señal visible y elegibilidad: compra REAL requiere Score O >=70.
 
     Separar 3 preguntas distintas:
@@ -386,6 +426,16 @@ def reconcile_buy_label(row: dict | None, signal: str, tone: str,
         if rank>=MIN_OPTION_SCORE:
             return "VIGILAR COMPRA · SCORE","watch",reasons+[explanation]
         return "ESPERAR","wait",reasons+[explanation]
+    if not is_buy and rank>=PRIORITY_OPTION_SCORE:
+        qualified,blocked=high_score_precaution(row,market,vix,True)
+        if qualified and (signal.startswith("VIGILAR") or signal in (
+                "ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR")):
+            return ("COMPRA CON PRECAUCIÓN","caution",reasons+[
+                f"Score Oportunidad {rank:.1f}/100 >=75 con estructura y volumen válidos: "
+                "habilita sólo COMPRA CON PRECAUCIÓN, sin exigir cruce en esta vela. "
+                "Entrada simulada reducida en tramos 40/35/25; validar riesgo y precio"])
+        if blocked:
+            reasons=reasons+[f"Score alto pero no comprar: {', '.join(blocked)}"]
     is_hold=signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR")
     if is_hold and rank>=MIN_BUY_SCORE:
         blocked=list((candidate or {}).get("blockers") or [])
