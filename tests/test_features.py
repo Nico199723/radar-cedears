@@ -81,6 +81,18 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(event_label(None,True),"FECHA SIN VERIFICAR")
         self.assertEqual(event_label(None,False),"FECHA NO CONSULTADA")
 
+    def test_top5_has_individual_volume_usd_not_last_loop_value(self):
+        base=self._sample()
+        base.update(rank_score=82,roc20=5,invalid_usd=90,target_2r=120,date="2026-11-11")
+        a1=dict(base);a1["dollar_volume20"]=20_000_000
+        a2=dict(base);a2["dollar_volume20"]=125_000_000
+        items=[{"ticker":"AA","usa":"AA","sector":"Salud","data":a1,"signal":"ESPERAR","earnings":None},
+               {"ticker":"BB","usa":"BB","sector":"Industriales","data":a2,"signal":"ESPERAR","earnings":None}]
+        ranked=top_five(items,{"roc20":3},"DEFENSIVO")
+        got={x["ticker"]:x["dollar_volume20"] for x in ranked}
+        self.assertEqual(got["AA"],20_000_000)
+        self.assertEqual(got["BB"],125_000_000)
+
     def test_top5_diversifies_excludes_weak_and_thin(self):
         data=self._sample()
         data.update(rank_score=85,roc20=9,invalid_usd=95,target_2r=110,date="2026-11-11")

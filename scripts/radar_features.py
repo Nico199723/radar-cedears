@@ -151,7 +151,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
             "price":d["price"],"ma20":d["ma20"],"invalid_usd":d.get("invalid_usd"),
             "target_2r":d.get("target_2r"),
             "relative_spy20":relative,"rvol20":d.get("rvol20"),
-            "dollar_volume20":dollar,"signal":a["signal"],"tag":tag,
+            "dollar_volume20":d.get("dollar_volume20"),"signal":a["signal"],"tag":tag,
             "earnings":e,"date":d.get("date"),
         })
         if len(selection)>=limit:break
