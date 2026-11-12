@@ -71,6 +71,33 @@ class FeatureTests(unittest.TestCase):
                 "rvol20":1.4,"dollar_volume20":25_000_000,"obv_up10":True,
                 "stretch_atr20":.5,"near20":True,"breakout":False}
 
+    def test_compra_prudente_no_necesita_spy_qqq_sobre_sma50(self):
+        # El régimen DEFENSIVO ya representa que ambos índices pueden estar abajo.
+        d=self._sample()
+        d["cross_up21"]=True
+        d["near20"]=False
+        d["breakout"]=False
+        sig,tone,note=cautious_signal(d,"DEFENSIVO",19,True,"ESPERAR MACRO")
+        self.assertEqual(sig,"COMPRA CON PRECAUCIÓN")
+        self.assertEqual(tone,"wait")
+        self.assertIn("reserva",note)
+        d["ma21"]=d["price"]+1
+        sig,_,_=cautious_signal(d,"DEFENSIVO",19,True,"ESPERAR MACRO")
+        self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
+
+    def test_cautious_never_buys_without_trigger_or_macro_data(self):
+        d=self._sample()
+        d["near20"]=False
+        d["breakout"]=False
+        d["cross_up21"]=False
+        self.assertEqual(cautious_signal(d,"MIXTO",18,True,"ESPERAR")[0],
+                         "VIGILAR COMPRA · MACRO")
+        d["cross_up21"]=True
+        self.assertEqual(cautious_signal(d,"NO VERIFICADO",18,True,"ESPERAR")[0],
+                         "ESPERAR")
+        self.assertEqual(cautious_signal(d,"MIXTO",26,True,"ESPERAR")[0],
+                         "ESPERAR")
+
     def test_cautious_macro_can_find_exception(self):
         sig,_,note=cautious_signal(self._sample(),"DEFENSIVO",18,True,"ESPERAR MACRO")
         self.assertEqual(sig,"COMPRA CON PRECAUCIÓN")
