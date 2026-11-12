@@ -197,8 +197,12 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     if a.get("signal","").startswith(("SALIR","REDUCIR","DATOS","SIN")):
         return False,""
     if market!="FAVORABLE":
-        # Mismo resultado que muestra el screener (no comprar sólo por macro).
-        return (True,"COMPRA CON PRECAUCIÓN · TAMAÑO REDUCIDO") if a.get("signal")=="COMPRA CON PRECAUCIÓN" else (False,"")
+        # Revalidar TODO el setup al cierre, nunca confiar sólo en una etiqueta.
+        from radar_features import cautious_signal
+        candidate,_,_=cautious_signal(d,market,vix,True,"ESPERAR MACRO")
+        if candidate!="COMPRA CON PRECAUCIÓN" or a.get("signal")!=candidate:
+            return False,""
+        return True,"COMPRA CON PRECAUCIÓN · TAMAÑO REDUCIDO"
     p,ma21,ma200=(d.get(k) for k in ("price","ma21","ma200"))
     if not all(x is not None and x>0 for x in (p,ma21,ma200)):
         return False,""
