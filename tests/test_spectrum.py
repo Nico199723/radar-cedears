@@ -72,7 +72,7 @@ class SpectrumTests(unittest.TestCase):
     def test_flattening_ma21_reduces_timing_score(self):
         # Reversión moderada sin perder el nivel: media21 deja de subir.
         rising=pd.Series(np.linspace(100,110,80))
-        flat=pd.Series([100.]*49+list(np.linspace(100,110,21))+[110.]*10)
+        flat=pd.Series([100.]*49+[110.]*31)
         a=sma21_priority(rising,atr=2)
         b=sma21_priority(flat,atr=2)
         self.assertGreaterEqual(a["sma21_slope_pct3"],0)
