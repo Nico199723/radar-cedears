@@ -354,7 +354,13 @@ def main():
     sectors=[]
     for sector,proxy in SECTORS.items():
         val=technical.get(proxy)
-        signal,tone,why=get_signal(val,macro,is_fresh(val))
+        fresh=is_fresh(val)
+        signal,tone,why=get_signal(val,macro,fresh)
+        if ENABLE_CAUTION_ENTRIES and val:
+            candidate, candidate_tone, note=cautious_signal(val,macro,vixvalue,fresh,signal)
+            if candidate!=signal:
+                signal,tone=candidate,candidate_tone
+                if note:why=why+[note]
         sectors.append({'sector':sector,'proxy':proxy,'signal':signal,'tone':tone,'reasons':why,'data':val})
     result={
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
@@ -363,6 +369,10 @@ def main():
           'rules_version':'1.5-macro-riesgo-no-veto-acciones-etfs',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
+          'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
+                                 for label in sorted({a['signal'] for a in assets})},
+          'sector_signal_counts':{label:sum(a['signal']==label for a in sectors)
+                                  for label in sorted({a['signal'] for a in sectors})},
           'note':'La baja de SPY/QQQ bajo SMA50 deja de vetar todas las compras: acciones y ETFs con SMA21/semanal, RS y volumen confirmados pueden ser COMPRA CON PRECAUCIÓN. Paper usa USD120/70% reserva/6% stop; favorable USD250/50%/8%. Ranking RSI/SMA200 penalizado. No existe ventaja OOS demostrada; no orden real ni ratio BYMA validado.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
