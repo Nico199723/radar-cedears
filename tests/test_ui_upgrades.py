@@ -34,9 +34,16 @@ class UIUpgradeTests(unittest.TestCase):
         self.assertIn("const batchStale=",self.js)
 
     def test_rule_change_gated_pending_backtest(self):
-        self.assertFalse(ENABLE_CAUTION_ENTRIES)
-        self.assertIn("if ENABLE_CAUTION_ENTRIES and val:",self.updater)
+        self.assertTrue(ENABLE_CAUTION_ENTRIES)
+        self.assertIn('if ENABLE_CAUTION_ENTRIES and val and val.get("asset_kind") in ("ACCION","ETF / INDICE / NO CLASIFICADO"):',self.updater)
         self.assertIn("cautious_signal",self.updater)
+
+    def test_rs_penalties_and_etfs_visible(self):
+        self.assertIn("<th>Score O.</th>",self.html)
+        self.assertIn("30% fuerza relativa SPY/QQQ",self.html)
+        self.assertIn("RS vs QQQ",self.js)
+        self.assertIn("rank_penalty_reasons",self.js)
+        self.assertIn("volume_confirm_score",self.js)
 
     def test_volume_rank_not_replaces_legacy_signal_score(self):
         self.assertIn('result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)',self.updater)

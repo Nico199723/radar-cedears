@@ -21,13 +21,13 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength
 from earnings import earnings_for_candidates, event_label
 from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
 from paper_store import load_or_initialize
 
 # Se activa sólo tras contrastar baseline y candidato en datos fuera de muestra.
-ENABLE_CAUTION_ENTRIES = False
+ENABLE_CAUTION_ENTRIES = True
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "config" / "universo.csv"
@@ -47,6 +47,13 @@ SECTORS = {
     "Telecomunicaciones": "IYZ", "Turismo y viajes": "JETS",
 }
 
+
+KNOWN_US_ETFS=set(SECTORS.values()) | {
+        "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
+        "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
+        "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
+        "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
+    }
 
 def number(v, nd=3):
     try:
@@ -113,7 +120,9 @@ def last_complete_daily(df: pd.DataFrame, now: datetime) -> pd.DataFrame:
     return df
 
 
-def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | None:
+def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
+            spy_close: pd.Series | None = None,
+            qqq_close: pd.Series | None = None) -> dict | None:
     df = last_complete_daily(df, now)
     if len(df) < 240:
         return None
@@ -125,8 +134,10 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     ma20 = float(c.tail(20).mean())
     ma50 = float(c.tail(50).mean())
     ma200 = float(c.tail(200).mean())
-    rsiD = float(rsi(c, 14).iloc[-1])
-    histD = float(macd_hist(c).iloc[-1])
+    rsi_daily = rsi(c,14)
+    macd_daily = macd_hist(c)
+    rsiD = float(rsi_daily.iloc[-1])
+    histD = float(macd_daily.iloc[-1])
     roc20 = float((price / c.iloc[-21] - 1) * 100)
     vol = float(c.pct_change().tail(20).std() * np.sqrt(252) * 100)
     # Semana completa: sólo viernes cerrado, evita RSI semanal parcial.
@@ -178,7 +189,8 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     else:
         obj1 = obj2 = None
     volumes = volume_profile(df) if {"Volume", "High", "Low"} <= set(df.columns) else {}
-    sma21 = sma21_priority(c)
+    sma21 = sma21_priority(c,rsi_daily,macd_daily,volumes.get("atr14"))
+    rs = relative_strength(c,spy_close,qqq_close)
     result = {
         "date":date.isoformat(), "price":number(price,3), "ma20":number(ma20,3),
         "ma50":number(ma50,3), "ma200":number(ma200,3),
@@ -191,6 +203,7 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False) -> dict | N
     }
     result.update(volumes)
     result.update(sma21)
+    result.update(rs)
     result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)
     result["asset_kind"] = "ACCION" if is_stock else "ETF / INDICE / NO CLASIFICADO"
     return result
@@ -210,7 +223,12 @@ def get_signal(row: dict | None, macro: str, fresh: bool) -> tuple[str,str,list[
         reasons.append("Cruce bajista del cierre diario bajo SMA21: revisar estructura y proteger riesgo")
     bearish = p < m200 and macdD < 0 and rsiD < 40
     reduced = ((p < m50 and macdD < 0 and rsiD < 48) or sc < 30)
-    bull = sc >= 73 and p > m50 > m200 and 46 <= rsiD <= 70 and macdD > 0
+    # El score histórico sigue existiendo, pero las nuevas compras normales
+    # deben pasar el score de oportunidad, con RSI y RS frente a índices.
+    bull = (sc >= 73 and p > m50 > m200 and 46 <= rsiD <= 70
+            and macdD > 0 and row.get("rank_score") is not None
+            and row["rank_score"] >= 60 and row.get("rs_verified") is True
+            and row.get("rs_score",0) >= 45)
     entry = bool(row["near20"] or row["breakout"])
     if bearish:
         return "SALIR / EVITAR", "down", reasons+["Bajo SMA200 con RSI débil y MACD negativo; revisar tesis antes de mantener"]
@@ -276,17 +294,15 @@ def main():
     frames=get_prices(symbols,now)
     # Catálogo curado: excluimos ETFs y proxies frecuentes de la ponderación accionaria.
     # La clasificación es orientativa; no sustituye confirmación del tipo de instrumento.
-    etfs=set(SECTORS.values()) | {
-        "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
-        "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
-        "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
-        "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
-    }
+    etfs=KNOWN_US_ETFS
     nonstocks={x["subyacente_usa"] for x in catalog if x["sector"]=="Índices y ETFs"}
+    spy_close = last_complete_daily(frames["SPY"],now)["Close"] if "SPY" in frames else None
+    qqq_close = last_complete_daily(frames["QQQ"],now)["Close"] if "QQQ" in frames else None
     technical={}
     for sym,frame in frames.items():
         try:
-            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks))
+            v=compute(frame,now,is_stock=(sym not in etfs and sym not in nonstocks),
+                      spy_close=spy_close,qqq_close=qqq_close)
             if v:technical[sym]=v
         except Exception as exc:
             logging.warning("Error de cálculo %s: %s",sym,exc)
@@ -319,14 +335,24 @@ def main():
         val=technical.get(us) if us else None
         fresh=is_fresh(val)
         signal,tone,why = get_signal(val,macro,fresh)
-        if ENABLE_CAUTION_ENTRIES and val:
+        if ENABLE_CAUTION_ENTRIES and val and val.get("asset_kind") in ("ACCION","ETF / INDICE / NO CLASIFICADO"):
             candidate, candidate_tone, note = cautious_signal(val,macro,vixvalue,fresh,signal)
             if candidate != signal:
                 signal,tone=candidate,candidate_tone
                 if note:why=why+[note]
         if not us:
             signal,tone,why='SIN SUBYACENTE USA','neutral',['No existe mapeo USD estadounidense confiable; no usar ticker homónimo']
+        prudent=macro in ("DEFENSIVO","MIXTO")
+        risk_plan=({"mode":"SIN ENTRADAS","max_position_usd":0,
+                    "min_reserve_pct":100,"reference_stop_pct":None,"risk_at_stop_usd":0}
+                   if (macro=="NO VERIFICADO" or vixvalue is None or vixvalue>=25) else
+                   {"mode":"PRUDENTE","max_position_usd":120,
+                    "min_reserve_pct":70,"reference_stop_pct":6,"risk_at_stop_usd":7.2}
+                   if prudent else
+                   {"mode":"NORMAL","max_position_usd":250,
+                    "min_reserve_pct":50,"reference_stop_pct":8,"risk_at_stop_usd":20})
         assets.append({
+            'risk_plan_paper':risk_plan,
             'ticker':item['cedear'], 'usa':us or None, 'sector':item['sector'],
             'cedear_verificado':False, # Catálogo curado NO sustituye PDF oficial BYMA
             'estado_instrumento':'PENDIENTE VALIDAR RATIO Y LISTADO BYMA',
@@ -350,12 +376,12 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.1-sma21-rank-stock-v1-base-signals-unchanged',
+          'rules_version':'1.4-sma21-aging-gradient-rsi-macd-acciones-etfs-v1',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
-          'note':'SMA21 para acciones: 65% score anterior, 15% volumen, 20% SMA21. ETFs mantienen 85/15. Cruces son informativos, no compras nuevas. CEDEAR BYMA/ratio/spread sin validar.'},
+          'note':'Score Oportunidad con fuerza relativa SPY/QQQ (30%) y volumen confirmado (20%). SMA21 premia cruces recientes y pierde peso al madurar 10+ ruedas, penaliza pérdida de pendiente RSI/MACD, extremos y baja SMA200. Macro adversa modera tamaño, no bloquea automáticamente. Sin ventaja OOS demostrada; BYMA sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
-                 'reason':'Filtro SPY y QQQ vs SMA50, VIX <25 como habilitación inicial. Validar FED/BOJ/GEX antes de operar.'},
+                 'reason':'SPY/QQQ bajo SMA50 implica régimen defensivo y menor sizing; puede haber compra prudente con fuerza propia, SMA21 y volumen. VIX>=25 o macro sin verificar bloquean nuevas compras. No ejecuta órdenes.'},
         'assets':assets,'sectors':sectors,'top5':selection
     }
     # Forward-paper: cada run restaura un ledger previo, nunca inventa fills del pasado.

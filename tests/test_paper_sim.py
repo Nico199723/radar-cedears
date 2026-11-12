@@ -12,7 +12,7 @@ import pandas as pd
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
-from paper_sim import new_ledger,process_ledger,public_summary,evaluate_entry,check_ledger,STOP_PCT,INITIAL,VERSION
+from paper_sim import new_ledger,process_ledger,public_summary,evaluate_entry,check_ledger,STOP_PCT,INITIAL,VERSION,allocation_for,PRUDENT_BUDGET,PRUDENT_STOP_PCT
 from paper_store import latest_state,ARTIFACT_NAME
 
 
@@ -23,10 +23,12 @@ def candles(opens, lows, closes):
 
 
 def asset(day,code="AAA",sector="Tecnología e internet",price=100):
-    data={"asset_kind":"ACCION","date":day,"price":price,"ma21":99,"ma200":87,
+    data={"asset_kind":"ACCION","date":day,"price":price,"ma21":99,"ma50":93,"ma200":87,
           "score":82,"rank_score":88,"rsi14d":58,"macd_hist_d":.2,
           "rvol20":1.2,"dollar_volume20":60_000_000,"obv_up10":True,
-          "stretch_atr20":.3,"cross_up21":True,"rsi21w":59,"macd_hist_w":.3}
+          "stretch_atr20":.3,"cross_up21":True,"rsi21w":59,"macd_hist_w":.3,
+          "rs_verified":True,"rs_score":70,"rs_spy20":5,"rs_qqq20":4,
+          "rank_penalty":0,"volume_confirm_score":85}
     return {"ticker":code,"usa":code,"sector":sector,"signal":"ESPERAR MACRO",
             "earnings":None,"data":data}
 
@@ -37,6 +39,35 @@ class PaperTests(unittest.TestCase):
         self.market=candles([100,101,102,103],[99,100,101,102],[100,101,102,103])
         self.stock=candles([100,101,100,88],[99,100,95,83],[100,101,101,85])
         self.frames={"SPY":self.market,"AAA":self.stock}
+
+    def test_sizing_macro_defensivo_vs_favorable(self):
+        prudent=allocation_for("DEFENSIVO")
+        normal=allocation_for("FAVORABLE")
+        self.assertEqual(prudent["budget"],120)
+        self.assertEqual(prudent["reserve"],1400)
+        self.assertAlmostEqual(prudent["stop_pct"],.06)
+        self.assertEqual(prudent["max_slots"],2)
+        self.assertEqual(prudent["max_sector_slots"],1)
+        self.assertEqual(normal["budget"],250)
+        self.assertEqual(normal["reserve"],1000)
+        self.assertAlmostEqual(normal["stop_pct"],.08)
+        with self.assertRaises(ValueError):
+            allocation_for("NO VERIFICADO")
+
+    def test_defensivo_dos_posiciones_menor_monto_stop_seis(self):
+        s=new_ledger(self.days[0],"2026-11-10T20:00:00Z")
+        assets=[asset(self.days[1],"X"+str(i),sector="Sector "+str(i)) for i in range(4)]
+        frames={"SPY":self.market}
+        for a in assets:frames[a["usa"]]=self.stock
+        process_ledger(s,frames,assets,"DEFENSIVO",18,self.days[1])
+        self.assertEqual(len(s["orders"]),2)
+        self.assertTrue(all(o["risk_mode"]=="PRUDENTE" for o in s["orders"]))
+        process_ledger(s,frames,[],"NO VERIFICADO",None,self.days[2])
+        self.assertEqual(len(s["positions"]),2)
+        self.assertAlmostEqual(INITIAL-s["cash"],96,delta=1)
+        self.assertGreaterEqual(s["cash"],1400)
+        self.assertTrue(all(p["stop_pct"]==.06 for p in s["positions"].values()))
+        self.assertTrue(all(p["budget"]==120 for p in s["positions"].values()))
 
     def test_first_run_does_not_retroactively_buy(self):
         s=new_ledger(self.days[1],"2026-11-11T20:00:00Z")
@@ -78,6 +109,15 @@ class PaperTests(unittest.TestCase):
         self.assertLess(s["cash"],INITIAL)
         self.assertEqual(s["fills"][-1]["action"],"STOP LOSS")
 
+    def test_paper_admite_continuacion_prudente_sin_cruce_del_dia(self):
+        a=asset(self.days[1])
+        a["signal"]="COMPRA CON PRECAUCIÓN"
+        a["data"].update({"cross_up21":False,"near20":False,
+                          "stretch_atr20":.85,"rank_score":84})
+        self.assertTrue(evaluate_entry(a,"DEFENSIVO",18)[0])
+        a["data"]["stretch_atr20"]=2.0
+        self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
+
     def test_entry_in_defensive_requires_weekly_and_vix(self):
         a=asset(self.days[1])
         ok,msg=evaluate_entry(a,"DEFENSIVO",18)
@@ -88,13 +128,17 @@ class PaperTests(unittest.TestCase):
         a["data"]["macd_hist_w"]=-.1
         self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
 
-    def test_no_balance_or_etf_entries(self):
+    def test_balance_blocks_and_etf_can_enter_with_caution(self):
         a=asset(self.days[1])
         a["earnings"]={"days_until":5}
         self.assertFalse(evaluate_entry(a,"FAVORABLE",16)[0])
         a["earnings"]=None
         a["data"]["asset_kind"]="ETF / INDICE / NO CLASIFICADO"
-        self.assertFalse(evaluate_entry(a,"FAVORABLE",16)[0])
+        a["ticker"]="IBB";a["usa"]="IBB";a["sector"]="Índices y ETFs"
+        self.assertTrue(evaluate_entry(a,"DEFENSIVO",18)[0])
+        self.assertTrue(evaluate_entry(a,"FAVORABLE",16)[0])
+        a["data"]["rsi14d"]=80
+        self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
 
     def test_cash_reserve_and_four_max_slots(self):
         s=new_ledger(self.days[0],"2026-11-10T20:00:00Z")

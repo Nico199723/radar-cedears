@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from actualizar import compute, get_signal, read_catalog
+from actualizar import compute, get_signal, read_catalog, KNOWN_US_ETFS
 from radar_features import cautious_signal
 
 NY = ZoneInfo("America/New_York")
@@ -88,7 +88,9 @@ def macro_history(spy: pd.DataFrame, qqq: pd.DataFrame, vix: pd.DataFrame) -> di
 
 
 def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
-                         variant: str = 'baseline', vix_by_day: dict | None = None) -> dict:
+                         variant: str = 'baseline', vix_by_day: dict | None = None,
+                         is_stock: bool = True, spy_close: pd.Series | None = None,
+                         qqq_close: pd.Series | None = None) -> dict:
     """Reutilizar EXACTAMENTE compute/get_signal de producción, con serie truncada en t."""
     frame = normalize(frame)
     decisions = {}
@@ -98,7 +100,8 @@ def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
             continue
         if day not in macros:
             continue
-        row = compute(frame.iloc[:pos + 1], close_time(day))
+        row = compute(frame.iloc[:pos + 1], close_time(day),is_stock=is_stock,
+                      spy_close=spy_close,qqq_close=qqq_close)
         if row is None:
             continue
         signal, _, _ = get_signal(row, macros[day], True)
@@ -112,7 +115,8 @@ def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
 
 
 def simulate(frame: pd.DataFrame, decisions: dict, ticker: str,
-             fee_bps: float = 5.0, slippage_bps: float = 10.0) -> tuple[list[Trade], pd.Series]:
+             fee_bps: float = 5.0, slippage_bps: float = 10.0,
+             paper_sizing: bool = False) -> tuple[list[Trade], pd.Series]:
     """Una única posición larga; sin lookahead, sin apalancamiento y costo de ambos lados."""
     if fee_bps < 0 or slippage_bps < 0:
         raise ValueError("Comisiones/slippage no pueden ser negativos")
@@ -124,15 +128,16 @@ def simulate(frame: pd.DataFrame, decisions: dict, ticker: str,
     def sell(day, execution, reason):
         nonlocal cash, shares, opened, basis
         effective = execution * (1 - slip)
-        cash = shares * effective * (1 - fee)
-        net_profit = cash - basis["spent"]
+        proceeds = shares * effective * (1 - fee)
+        cash += proceeds
+        net_profit = proceeds - basis["spent"]
         at_risk = shares * (basis["entry"] - basis["stop"])
         trades.append(Trade(
             ticker=ticker, signal_date=basis["signal_date"],
             entry_date=basis["entry_date"], exit_date=day.strftime("%Y-%m-%d"),
             entry=round(basis["entry"], 5), stop=round(basis["stop"], 5),
             exit=round(effective, 5), exit_reason=reason,
-            net_return_pct=round((cash / basis["spent"] - 1) * 100, 5),
+            net_return_pct=round((proceeds / basis["spent"] - 1) * 100, 5),
             net_r=round(net_profit / at_risk, 5) if at_risk > 0 else float("nan"),
         ))
         shares, opened, basis = 0.0, None, None
@@ -149,9 +154,14 @@ def simulate(frame: pd.DataFrame, decisions: dict, ticker: str,
                 stop = decision.get("stop")
                 entry = float(bar["Open"]) * (1 + slip)
                 if stop is not None and math.isfinite(float(stop)) and 0 < float(stop) < entry:
-                    spent = cash
-                    shares = cash / (entry * (1 + fee))
-                    cash = 0.0
+                    if paper_sizing:
+                        fraction = .06 if sig=="COMPRA CON PRECAUCIÓN" else .125
+                        stop = max(float(stop),entry*(1-(.06 if sig=="COMPRA CON PRECAUCIÓN" else .08)))
+                        spent = min(cash,fraction)
+                    else:
+                        spent = cash
+                    shares = spent / (entry * (1 + fee))
+                    cash -= spent
                     opened, basis = day, {
                         "spent": spent, "entry": entry, "stop": float(stop),
                         "signal_date": yesterday.strftime("%Y-%m-%d"),
@@ -249,6 +259,7 @@ def main():
                    help="Subyacentes USA USD separados por coma; no símbolos CEDEAR locales")
     p.add_argument("--years", type=int, choices=range(5, 11), metavar="[5..10]", default=10)
     p.add_argument("--variant", choices=("baseline","prudente"), default="baseline")
+    p.add_argument("--paper-sizing",action="store_true",help="Size 12.5% normal / 6% prudente, stops máximos 8% / 6%")
     p.add_argument("--fee-bps", type=float, default=5.0)
     p.add_argument("--slippage-bps", type=float, default=10.0)
     p.add_argument("--out", default="backtest-out", help="Carpeta fuera de docs/")
@@ -263,18 +274,23 @@ def main():
         raise SystemExit("No hay macro completa SPY/QQQ/VIX; NO ejecutar señales de compra")
     macro = macro_history(*(frames[t] for t in required))
     vix_by_day = normalize(frames["^VIX"])["Close"].to_dict()
+    spy_close=normalize(frames["SPY"])["Close"]
+    qqq_close=normalize(frames["QQQ"])["Close"]
     start_date = (datetime.now(NY).date() - timedelta(days=int(args.years * 365.25))).isoformat()
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
     totals = []
+    nonstocks={x["subyacente_usa"] for x in read_catalog() if x["sector"]=="Índices y ETFs"} | KNOWN_US_ETFS
     for symbol in tickers:
         if symbol not in frames:
             totals.append({"ticker": symbol, "estado": "SIN HISTÓRICO"})
             continue
         f = frames[symbol]
-        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day)
+        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day,
+                                         is_stock=(symbol not in nonstocks),
+                                         spy_close=spy_close,qqq_close=qqq_close)
         valid = f.loc[f.index >= pd.Timestamp(start_date)]
-        trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps)
+        trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps,paper_sizing=args.paper_sizing)
         row = {"ticker": symbol, "estado": "OK", "inicio":str(curve.index[0].date()),
                "fin":str(curve.index[-1].date()), **metrics(trades, curve),
                "SPY_buy_hold": benchmark(frames["SPY"], curve.index, args.fee_bps, args.slippage_bps),
@@ -297,10 +313,10 @@ def main():
     report={"version":"macro-"+args.variant+"-comparacion-2026-11-12",
             "as_of":datetime.now(NY).isoformat(),
             "source":"Yahoo Finance/yfinance OHLC ajustado USD; datos sujetos a revisión",
-            "variant":args.variant,"years_requested":args.years,"fee_bps_per_side":args.fee_bps,
+            "variant":args.variant,"paper_sizing":args.paper_sizing,"years_requested":args.years,"fee_bps_per_side":args.fee_bps,
             "slippage_bps_per_side":args.slippage_bps,
             "limitations":["sesgo supervivencia (universo actual)", "earnings NO aplicado en código actual",
-                "sin tramos 40/35/25", "sin CEDEAR ARS/CCL", "sin validación de Koncorde",
+                "sizing de posición parcial 12.5%/6% pero sin tramos 40/35/25", "sin CEDEAR ARS/CCL", "sin validación de Koncorde",
                 "cierre semanal parcial replicado desde producción", "sin sensibilidad de umbrales todavía"],
             "results":totals}
     (output / "resumen.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")

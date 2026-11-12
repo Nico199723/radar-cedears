@@ -8,7 +8,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
-from radar_features import volume_profile,ranking_score,cautious_signal,top_five,sma21_priority,ranking_stock_21
+from radar_features import volume_profile,ranking_score,cautious_signal,top_five,sma21_priority,ranking_stock_21,relative_strength,score_penalties
 from earnings import parse_earnings,event_label
 
 
@@ -22,23 +22,25 @@ class FeatureTests(unittest.TestCase):
                                  "Volume":volumes},index=idx)
 
     def test_sma21_cruce_alcista_solo_con_velas_pasadas(self):
-        c=pd.Series([100.]*22+[103.])
+        c=pd.Series([100.]*24+[103.])
         r=sma21_priority(c)
         self.assertTrue(r["cross_up21"])
         self.assertFalse(r["cross_down21"])
-        self.assertEqual(r["sma21_component"],100)
+        self.assertEqual(r["sma21_age"],1)
+        self.assertGreater(r["sma21_component"],85)
         c2=c.copy()
         c2.iloc[-1]=97
         s=sma21_priority(c2)
         self.assertTrue(s["cross_down21"])
-        self.assertEqual(s["sma21_component"],0)
+        self.assertLess(s["sma21_component"],15)
 
     def test_stock_ranking_21_pesa_mas_que_simple_volumen(self):
-        baseline={"score":70,"volume_score":5,"sma21_component":100}
+        baseline={"score":70,"volume_confirm_score":80,"sma21_component":100,
+                  "rs_score":60,"rs_verified":True,"rsi14d":56,"price":120,"ma200":100}
         up=ranking_stock_21(baseline)
         down=ranking_stock_21({**baseline,"sma21_component":0})
         self.assertEqual(up-down,20)
-        self.assertEqual(up,round(70*.65+7.5+20))
+        self.assertEqual(up,round(70*.30+80*.20+60*.30+20))
 
     def test_indice_mantiene_pesos_preexistentes(self):
         from actualizar import compute
@@ -62,14 +64,61 @@ class FeatureTests(unittest.TestCase):
         self.assertLessEqual(volume_profile(f)["volume_score"],10)
         f.iloc[-1,f.columns.get_loc("Volume")]=0
         self.assertGreaterEqual(volume_profile(f)["volume_score"],0)
-        self.assertEqual(ranking_score({"score":80,"volume_score":10}),83)
-        self.assertIsNone(ranking_score({"score":80,"volume_score":None}))
+        ranked={"score":80,"volume_confirm_score":90,"sma21_component":80,
+                "rs_score":75,"rs_verified":True}
+        self.assertEqual(ranking_score(ranked),round(.35*80+.15*80+.30*75+.20*90))
+        self.assertIsNone(ranking_score({"score":80,"volume_confirm_score":None,"sma21_component":80}))
 
     def _sample(self):
-        return {"score":85,"price":100,"ma20":99,"ma50":96,"ma200":90,
+        return {"score":85,"price":100,"ma20":99,"ma21":98,"ma50":96,"ma200":90,
                 "rsi14d":57,"rsi21w":58,"macd_hist_d":.4,"macd_hist_w":.2,
                 "rvol20":1.4,"dollar_volume20":25_000_000,"obv_up10":True,
-                "stretch_atr20":.5,"near20":True,"breakout":False}
+                "stretch_atr20":.5,"near20":True,"breakout":False,
+                "rank_score":81,"rank_penalty":0,"rs_verified":True,
+                "rs_score":70,"rs_spy20":5,"rs_qqq20":4,
+                "volume_confirm_score":85}
+
+    def test_compra_prudente_no_necesita_spy_qqq_sobre_sma50(self):
+        # El régimen DEFENSIVO ya representa que ambos índices pueden estar abajo.
+        d=self._sample()
+        d["cross_up21"]=True
+        d["near20"]=False
+        d["breakout"]=False
+        sig,tone,note=cautious_signal(d,"DEFENSIVO",19,True,"ESPERAR MACRO")
+        self.assertEqual(sig,"COMPRA CON PRECAUCIÓN")
+        self.assertEqual(tone,"wait")
+        self.assertIn("reserva",note)
+        d["ma21"]=d["price"]+1
+        sig,_,_=cautious_signal(d,"DEFENSIVO",19,True,"ESPERAR MACRO")
+        self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
+
+    def test_cautious_never_buys_without_trigger_or_macro_data(self):
+        d=self._sample()
+        d["near20"]=False
+        d["breakout"]=False
+        d["cross_up21"]=False
+        d["stretch_atr20"]=1.4
+        self.assertEqual(cautious_signal(d,"MIXTO",18,True,"ESPERAR")[0],
+                         "VIGILAR COMPRA · MACRO")
+        d["cross_up21"]=True
+        self.assertEqual(cautious_signal(d,"NO VERIFICADO",18,True,"ESPERAR")[0],
+                         "ESPERAR")
+        self.assertEqual(cautious_signal(d,"MIXTO",26,True,"ESPERAR")[0],
+                         "ESPERAR")
+
+    def test_continuacion_cercana_ma21_es_entrada_prudente(self):
+        d=self._sample()
+        d.update({"near20":False,"breakout":False,"cross_up21":False,
+                  "rank_score":86,"stretch_atr20":.9,"rvol20":.95})
+        self.assertEqual(cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+                         "COMPRA CON PRECAUCIÓN")
+        d["stretch_atr20"]=1.5
+        self.assertEqual(cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+                         "VIGILAR COMPRA · MACRO")
+        d["stretch_atr20"]=.9
+        d["rvol20"]=.70
+        self.assertNotEqual(cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+                            "COMPRA CON PRECAUCIÓN")
 
     def test_cautious_macro_can_find_exception(self):
         sig,_,note=cautious_signal(self._sample(),"DEFENSIVO",18,True,"ESPERAR MACRO")
@@ -92,7 +141,7 @@ class FeatureTests(unittest.TestCase):
             q=dict(d);q[k]=v
             sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
             self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
-        q=dict(d);q["near20"]=False
+        q=dict(d);q["near20"]=False;q["stretch_atr20"]=1.4
         sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
         self.assertEqual(sig,"VIGILAR COMPRA · MACRO")
 
