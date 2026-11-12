@@ -66,6 +66,20 @@ class SmoothScoreTests(unittest.TestCase):
         # Aumentar una sola rueda no pierde 12 puntos como antes.
         self.assertLess(max(abs(a-b) for a,b in zip(scores,scores[1:])),12)
 
+    def test_near_flat_volume_signal_does_not_jump_30_pts(self):
+        from radar_features import volume_profile
+        dates=pd.bdate_range("2026-04-01",periods=50)
+        close=np.linspace(100,110,50)
+        volume=np.full(50,2_000_000.)
+        def build(last):
+            v=close.copy();v[-1]=last
+            return pd.DataFrame({"Open":v,"High":v+2,"Low":v-2,
+                                 "Close":v,"Volume":volume},index=dates)
+        previous=close[-2]
+        up=volume_profile(build(previous+.01))["volume_confirm_score"]
+        down=volume_profile(build(previous-.01))["volume_confirm_score"]
+        self.assertLess(abs(up-down),1.0)
+
     def test_candidate_threshold_and_reasons_without_buy_order(self):
         r=sample()
         s=buy_candidate({**r,"rank_score":61.9},"ESPERAR",True)
