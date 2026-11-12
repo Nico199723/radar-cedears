@@ -25,8 +25,8 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from actualizar import compute, get_signal, read_catalog
-from radar_features import cautious_signal
+from actualizar import compute, get_signal, read_catalog, SECTORS
+from radar_features import cautious_signal, buy_candidate, reconcile_buy_label
 
 NY = ZoneInfo("America/New_York")
 REPO = Path(__file__).resolve().parents[1]
@@ -88,27 +88,39 @@ def macro_history(spy: pd.DataFrame, qqq: pd.DataFrame, vix: pd.DataFrame) -> di
 
 
 def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
-                         variant: str = 'baseline', vix_by_day: dict | None = None) -> dict:
-    """Reutilizar EXACTAMENTE compute/get_signal de producción, con serie truncada en t."""
+                         variant: str = 'baseline', vix_by_day: dict | None = None,
+                         spy_close: pd.Series | None = None,
+                         qqq_close: pd.Series | None = None,
+                         is_stock: bool = True) -> dict:
+    """A/B: floor70 vs score75, a cierre t; benchmarks recortados a t.
+
+    Usa el mismo setup/RS que en producción; para A/B sólo cambia si el
+    score>=75 activa precaución sin gatillo clásico. No aplica earnings.
+    """
     frame = normalize(frame)
     decisions = {}
     for pos in range(240, len(frame)):
         day = frame.index[pos]
-        if day.strftime("%Y-%m-%d") < start_date:
+        if day.strftime("%Y-%m-%d") < start_date or day not in macros:
             continue
-        if day not in macros:
-            continue
-        row = compute(frame.iloc[:pos + 1], close_time(day))
-        if row is None:
-            continue
-        signal, _, _ = get_signal(row, macros[day], True)
-        if variant == "prudente":
-            candidate, _, _ = cautious_signal(row,macros[day],
-                                    (vix_by_day or {}).get(day),True,signal)
-            if candidate == "COMPRA CON PRECAUCIÓN":
-                signal = candidate
-        decisions[day] = {"signal": signal, "stop": row["invalid_usd"]}
+        row=compute(frame.iloc[:pos+1],close_time(day),
+                    is_stock=is_stock,spy_close=spy_close,qqq_close=qqq_close)
+        if row is None:continue
+        signal,tone,reasons=get_signal(row,macros[day],True)
+        vix=(vix_by_day or {}).get(day)
+        if variant in ("prudente","floor70","score75"):
+            candidate,ca_tone,_=cautious_signal(row,macros[day],vix,True,signal)
+            if candidate!=signal:
+                signal,tone=candidate,ca_tone
+        if variant in ("floor70","score75"):
+            cand=buy_candidate(row,signal,True)
+            signal,tone,reasons=reconcile_buy_label(
+                row,signal,tone,reasons,True,cand,macros[day],vix,
+                allow_high_score=(variant=="score75"))
+        decisions[day]={"signal":signal,"stop":row["invalid_usd"],
+                        "score_o":row.get("rank_score")}
     return decisions
+
 
 
 def simulate(frame: pd.DataFrame, decisions: dict, ticker: str,
@@ -248,7 +260,7 @@ def main():
     p.add_argument("--tickers", default="AMZN,NVDA,MSFT,META,GOOGL,JPM,TGT,COPX,IREN,TQQQ",
                    help="Subyacentes USA USD separados por coma; no símbolos CEDEAR locales")
     p.add_argument("--years", type=int, choices=range(5, 11), metavar="[5..10]", default=10)
-    p.add_argument("--variant", choices=("baseline","prudente"), default="baseline")
+    p.add_argument("--variant", choices=("baseline","prudente","floor70","score75"), default="baseline")
     p.add_argument("--fee-bps", type=float, default=5.0)
     p.add_argument("--slippage-bps", type=float, default=10.0)
     p.add_argument("--out", default="backtest-out", help="Carpeta fuera de docs/")
@@ -263,6 +275,9 @@ def main():
         raise SystemExit("No hay macro completa SPY/QQQ/VIX; NO ejecutar señales de compra")
     macro = macro_history(*(frames[t] for t in required))
     vix_by_day = normalize(frames["^VIX"])["Close"].to_dict()
+    spy_close=normalize(frames["SPY"])["Close"]
+    qqq_close=normalize(frames["QQQ"])["Close"]
+    nonstocks={x["subyacente_usa"] for x in read_catalog() if x["sector"]=="Índices y ETFs"} | set(SECTORS.values())
     start_date = (datetime.now(NY).date() - timedelta(days=int(args.years * 365.25))).isoformat()
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
@@ -272,7 +287,10 @@ def main():
             totals.append({"ticker": symbol, "estado": "SIN HISTÓRICO"})
             continue
         f = frames[symbol]
-        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day)
+        decisions = historical_decisions(f, macro, start_date,variant=args.variant,
+                                         vix_by_day=vix_by_day,spy_close=spy_close,
+                                         qqq_close=qqq_close,
+                                         is_stock=(symbol not in nonstocks))
         valid = f.loc[f.index >= pd.Timestamp(start_date)]
         trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps)
         row = {"ticker": symbol, "estado": "OK", "inicio":str(curve.index[0].date()),
