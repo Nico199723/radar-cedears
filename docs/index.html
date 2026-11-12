@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c101a">
+  <meta name="description" content="Radar CEDEARs: señales técnicas sobre subyacentes de EE.UU. en USD, actualizadas por GitHub Actions.">
+  <title>Radar CEDEARs · Señales USD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">R<span class="brand-pip">·</span></span><span>RADAR <b>CEDEARs</b><small>USA / USD · Señales técnicas</small></span></div>
+    <div class="top-actions"><span class="live-indicator" id="liveIndicator"><i></i> Sin actualización</span><a class="linkbutton" href="https://www.byma.com.ar/productos/productos-financieros/cedears" rel="noopener noreferrer" target="_blank">BYMA oficial ↗</a></div>
+  </header>
+  <main class="layout">
+    <section class="hero">
+      <div class="eyebrow">SCREENER OPERATIVO · MERCADO ESTADOUNIDENSE</div>
+      <h1>¿Qué está para <em>comprar</em>, <em>esperar</em> o <em>reducir</em>?</h1>
+      <p>Señales calculadas exclusivamente con el <strong>subyacente de EE.UU. en dólares</strong>. El CEDEAR argentino es el vehículo para operar, no el precio usado para medir tendencia.</p>
+      <div class="hero-foot"><span class="smalltag">2 actualizaciones: 13:00 y 18:05 ARG · todos los días</span><span class="smalltag" id="heroLast">Esperando primer corte</span></div>
+    </section>
+    <section id="criticalBanner" class="critical" role="status">Cargando estado de datos…</section>
+    <section class="summary" aria-label="Resumen de mercado">
+      <div class="stat"><span class="stat-label">CONTEXTO SPY / QQQ</span><strong id="macroValue">—</strong><small id="macroSub">Filtro macro global</small></div>
+      <div class="stat"><span class="stat-label">SEÑALES PARA ESTUDIAR</span><strong id="buyCount">—</strong><small>Compra condicional + vigilar</small></div>
+      <div class="stat"><span class="stat-label">UNIVERSO CEDEARs</span><strong id="assetCount">—</strong><small id="mappedCount">Mapeo USA / USD</small></div>
+      <div class="stat"><span class="stat-label">COBERTURA DE PRECIOS</span><strong id="coverageCount">—</strong><small>Datos históricos descargados</small></div>
+    </section>
+    <nav class="tabs" aria-label="Vistas del radar">
+      <button class="tab active" data-tab="acciones" aria-current="page">Acciones y ETFs</button>
+      <button class="tab" data-tab="sectores">Radar sectorial</button>
+      <button class="tab" data-tab="cartera">Mi lista local <span id="trackedCount" class="count">0</span></button>
+      <button class="tab" data-tab="metodo">Método y riesgo</button>
+    </nav>
+    <section id="pageAcciones" class="page">
+      <div class="block-head"><div><span class="eyebrow">ESCUCHAR AL MERCADO ANTES DE ACTUAR</span><h2>Señales por ticker</h2></div><span class="muted" id="rowCount"></span></div>
+      <div class="filters">
+        <label class="filter search"><span>Buscar CEDEAR o subyacente</span><input id="searchInput" type="search" placeholder="Ej. NVDA, MSFT, XLE, MU…"></label>
+        <label class="filter"><span>Sector</span><select id="sectorFilter"><option value="">Todos los sectores</option></select></label>
+        <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compra / vigilar</option><option value="esperar">Esperar</option><option value="mantener">Mantener</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
+        <label class="filter"><span>Ordenar</span><select id="sortFilter"><option value="score">Mejor score técnico</option><option value="worst">Peor score técnico</option><option value="ticker">Ticker A–Z</option><option value="signal">Señal de acción</option></select></label>
+      </div>
+      <div class="tablebox"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>RSI14 D</th><th>MACD D</th><th>Score</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="7">Esperando datos del primer workflow…</td></tr></tbody></table></div>
+      <div class="footline"><span>Hacé clic en cualquier fila para ver la tesis, gatillo, invalidación y objetivos.</span><span>Los datos son al último cierre diario confirmado; nunca a precio CEDEAR ARS.</span></div>
+    </section>
+    <section id="pageSectores" class="page hidden"><div class="block-head"><div><span class="eyebrow">FUERZA RELATIVA POR ETF PROXY EN USD</span><h2>Mapa sectorial</h2></div><span class="muted">17 grupos de tu universo</span></div><div id="sectorCards" class="sector-grid"></div></section>
+    <section id="pageCartera" class="page hidden"><div class="block-head"><div><span class="eyebrow">GUARDADO SÓLO EN ESTE NAVEGADOR</span><h2>Mi seguimiento</h2></div></div><p class="muted">Marcá acciones desde una ficha con «Seguir / tengo». Sólo se guarda el ticker en este navegador; no cargamos tus cantidades, saldos ni datos de los brokers a GitHub.</p><div id="watchRows" class="watch-grid"></div></section>
+    <section id="pageMetodo" class="page hidden"><div class="block-head"><div><span class="eyebrow">REGLAS EXPLÍCITAS</span><h2>Cómo decidimos</h2></div></div>
+      <div class="method-grid">
+      <article><h3>La compra no es un score</h3><p>Requiere tendencia alcista (precio &gt; SMA50 &gt; SMA200), score ≥73, RSI14 diario entre 46–70, histograma MACD positivo, mercado favorable y señal de pullback/reacción cerca de SMA20 o ruptura validada de 20 sesiones con volumen.</p></article>
+      <article><h3>Macro que habilita</h3><p>Filtro automático inicial: SPY y QQQ por encima de su SMA50 y VIX menor a 25. Si está mixto, defensivo o sin validar, no se emite compra nueva. No sustituye FED, BOJ, yen carry trade ni revisión de noticias.</p></article>
+      <article><h3>Salida técnica</h3><p>REDUCIR si se debilita la estructura por debajo de SMA50 con RSI/MACD negativos; SALIR / EVITAR si cae debajo de SMA200, RSI &lt;40 y MACD negativo. No implica orden automática ni reemplaza el contexto de tu posición.</p></article>
+      <article><h3>Indicadores y marcos</h3><p>SMA20/50/200; RSI14 diario, RSI21 semanal y mensual; MACD 12/26/9 diario y 6/13/5 semanal/mensual; momentum 20, volatilidad, ADX14. El semanal usa semanas cerradas y el mensual meses completos. Koncorde no está automatizado en esta versión.</p></article>
+      <article><h3>Entrada en tramos y riesgo</h3><p>Plan orientativo: 40% / 35% / 25%, condicionado a liquidez y concentración que no están sincronizadas. Objetivos teóricos de 2R y 3R cuando hay invalidación razonable. Para opciones GGAL rigen restricciones aparte: este motor no produce señales de opciones.</p></article>
+      <article><h3>Validación BYMA</h3><p>La lista es un catálogo inicial curado (no inventario oficial total). Antes de operar hay que confirmar emisión vigente, ratio, ticker, volumen y spread en BYMA. La web muestra el subyacente en dólares y no calcula conversión CEDEAR/CCL.</p></article>
+      </div>
+      <p class="method-disclaimer">Fuente: Yahoo Finance vía yfinance (uso personal y educativo, sujeta a demoras y fallas). Hechos = precios e indicadores del dataset; interpretación = reglas mecánicas; escenario = entrada e invalidación hipotéticas. No incluye fundamentales automatizados ni ejecución de órdenes.</p>
+    </section>
+  </main>
+  <footer class="footer"><span>RADAR CEDEARs · Motor técnico USD · Sin órdenes automáticas</span><span id="footerSource">Datos pendientes</span></footer>
+  <dialog id="detailModal" class="modal"><button class="modal-close" id="modalClose" aria-label="Cerrar">×</button><div id="detailBody"></div></dialog>
+  <script src="app.js" defer></script>
+</body></html>

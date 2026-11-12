@@ -1,0 +1,3437 @@
+{
+  "meta": {
+    "source": "Catálogo local: pendiente primer corte",
+    "universe_size": 271,
+    "mapped_us": 254,
+    "download_coverage": 0
+  },
+  "macro": {
+    "state": "NO VERIFICADO"
+  },
+  "assets": [
+    {
+      "ticker": "ASTS",
+      "usa": "ASTS",
+      "sector": "Aeroespacial y defensa",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BA",
+      "usa": "BA",
+      "sector": "Aeroespacial y defensa",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ITA",
+      "usa": "ITA",
+      "sector": "Aeroespacial y defensa",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LMT",
+      "usa": "LMT",
+      "sector": "Aeroespacial y defensa",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "RKLB",
+      "usa": "RKLB",
+      "sector": "Aeroespacial y defensa",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SATL",
+      "usa": "SATL",
+      "sector": "Aeroespacial y defensa",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ADGO",
+      "usa": "AGRO",
+      "sector": "Agro",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BIOX",
+      "usa": "BIOX",
+      "sector": "Agro",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BNG",
+      "usa": "BG",
+      "sector": "Agro",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CORN",
+      "usa": "CORN",
+      "sector": "Agro",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LND",
+      "usa": "LND",
+      "sector": "Agro",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SOYB",
+      "usa": "SOYB",
+      "sector": "Agro",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BA.C",
+      "usa": "BAC",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BBAS3",
+      "usa": null,
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BBD",
+      "usa": "BBD",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BBDC3",
+      "usa": null,
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BBV",
+      "usa": "BBVA",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BCS",
+      "usa": "BCS",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BPA11",
+      "usa": null,
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BSBR",
+      "usa": "BSBR",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "C",
+      "usa": "C",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "HDB",
+      "usa": "HDB",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "HSBC",
+      "usa": "HSBC",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IBN",
+      "usa": "IBN",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ING",
+      "usa": "ING",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ITUB",
+      "usa": "ITUB",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ITUB3",
+      "usa": null,
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "JPM",
+      "usa": "JPM",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "KB",
+      "usa": "KB",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LYG",
+      "usa": "LYG",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MFG",
+      "usa": "MFG",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MUFG",
+      "usa": "MUFG",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SAN",
+      "usa": "SAN",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "USB",
+      "usa": "USB",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "WFC",
+      "usa": "WFC",
+      "sector": "Bancos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CL",
+      "usa": "CL",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "COST",
+      "usa": "COST",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DEO",
+      "usa": "DEO",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "KMB",
+      "usa": "KMB",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "KO",
+      "usa": "KO",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "KOFM",
+      "usa": "KOF",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MDLZ",
+      "usa": "MDLZ",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PEP",
+      "usa": "PEP",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SYY",
+      "usa": "SYY",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UL",
+      "usa": "UL",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "WMT",
+      "usa": "WMT",
+      "sector": "Consumo básico",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AMZN",
+      "usa": "AMZN",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ANF",
+      "usa": "ANF",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BABA",
+      "usa": "BABA",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DECK",
+      "usa": "DECK",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "JD",
+      "usa": "JD",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LREN3",
+      "usa": null,
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MCD",
+      "usa": "MCD",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MELI",
+      "usa": "MELI",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MGLU3",
+      "usa": null,
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NKE",
+      "usa": "NKE",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SE",
+      "usa": "SE",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SHOP",
+      "usa": "SHOP",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TGT",
+      "usa": "TGT",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TJX",
+      "usa": "TJX",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "URBN",
+      "usa": "URBN",
+      "sector": "Consumo discrecional",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BMNR",
+      "usa": "BMNR",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "COIN",
+      "usa": "COIN",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ETHA",
+      "usa": "ETHA",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "HUT",
+      "usa": "HUT",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IBIT",
+      "usa": "IBIT",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "KEEL",
+      "usa": null,
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MSTR",
+      "usa": "MSTR",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "RIOT",
+      "usa": "RIOT",
+      "sector": "Cripto y activos digitales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BKR",
+      "usa": "BKR",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BP",
+      "usa": "BP",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CCJ",
+      "usa": "CCJ",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CEG",
+      "usa": "CEG",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "COP",
+      "usa": "COP",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CVX",
+      "usa": "CVX",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "E",
+      "usa": "E",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "EQNR",
+      "usa": "EQNR",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GLNG",
+      "usa": "GLNG",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GPRK",
+      "usa": "GPRK",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "HAL",
+      "usa": "HAL",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ICLN",
+      "usa": "ICLN",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "KEP",
+      "usa": "KEP",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "OKLO",
+      "usa": "OKLO",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "OXY",
+      "usa": "OXY",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PBR",
+      "usa": "PBR",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PETR3",
+      "usa": null,
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PRIO3",
+      "usa": null,
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PSX",
+      "usa": "PSX",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SHEL",
+      "usa": "SHEL",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SLB",
+      "usa": "SLB",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TTE",
+      "usa": "TTE",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UGP",
+      "usa": "UGP",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "URA",
+      "usa": "URA",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "USO",
+      "usa": "USO",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VIST",
+      "usa": "VIST",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VST",
+      "usa": "VST",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLE",
+      "usa": "XLE",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLU",
+      "usa": "XLU",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XOM",
+      "usa": "XOM",
+      "sector": "Energía",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AXP",
+      "usa": "AXP",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BRKB",
+      "usa": "BRK-B",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "HOOD",
+      "usa": "HOOD",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MA",
+      "usa": "MA",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NU",
+      "usa": "NU",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PAGS",
+      "usa": "PAGS",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PYPL",
+      "usa": "PYPL",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "STNE",
+      "usa": "STNE",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UPST",
+      "usa": "UPST",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "V",
+      "usa": "V",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLF",
+      "usa": "XLF",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XP",
+      "usa": "XP",
+      "sector": "Finanzas y pagos",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ACWI",
+      "usa": "ACWI",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ARKK",
+      "usa": "ARKK",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BBAX",
+      "usa": null,
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BBCA",
+      "usa": null,
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DIA",
+      "usa": "DIA",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "EEM",
+      "usa": "EEM",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "EFA",
+      "usa": "EFA",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ESGU",
+      "usa": "ESGU",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "EWJ",
+      "usa": "EWJ",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "EWY",
+      "usa": "EWY",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "EWZ",
+      "usa": "EWZ",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "FXI",
+      "usa": "FXI",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IEMG",
+      "usa": "IEMG",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IEUR",
+      "usa": "IEUR",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IJH",
+      "usa": "IJH",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ILF",
+      "usa": "ILF",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IVE",
+      "usa": "IVE",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IVV",
+      "usa": "IVV",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IVW",
+      "usa": "IVW",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IWM",
+      "usa": "IWM",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PSQ",
+      "usa": "PSQ",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "QQQ",
+      "usa": "QQQ",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "RSP",
+      "usa": "RSP",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SH",
+      "usa": "SH",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SPHQ",
+      "usa": "SPHQ",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SPXL",
+      "usa": "SPXL",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SPY",
+      "usa": "SPY",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TQQQ",
+      "usa": "TQQQ",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VEA",
+      "usa": "VEA",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VXX",
+      "usa": "VXX",
+      "sector": "Índices y ETFs",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AVY",
+      "usa": "AVY",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CAT",
+      "usa": "CAT",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DD",
+      "usa": "DD",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DE",
+      "usa": "DE",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MMM",
+      "usa": "MMM",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UNP",
+      "usa": "UNP",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLI",
+      "usa": "XLI",
+      "sector": "Industriales",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BHP",
+      "usa": "BHP",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "COPX",
+      "usa": "COPX",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CSNA3",
+      "usa": null,
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "FCX",
+      "usa": "FCX",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GDX",
+      "usa": "GDX",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GGB",
+      "usa": "GGB",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GLD",
+      "usa": "GLD",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GSG",
+      "usa": "GSG",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LAC",
+      "usa": "LAC",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LAR",
+      "usa": "LAR",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MP",
+      "usa": "MP",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NUE",
+      "usa": "NUE",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PKS",
+      "usa": "PKX",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "RIO",
+      "usa": "RIO",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SCCO",
+      "usa": "SCCO",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SID",
+      "usa": "SID",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SLV",
+      "usa": "SLV",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TXR",
+      "usa": "TX",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VALE",
+      "usa": "VALE",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VALE3",
+      "usa": null,
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLB",
+      "usa": "XLB",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XME",
+      "usa": "XME",
+      "sector": "Materiales y minería",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ABBV",
+      "usa": "ABBV",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ABT",
+      "usa": "ABT",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AMGN",
+      "usa": "AMGN",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AZN",
+      "usa": "AZN",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BAYN",
+      "usa": null,
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BIIB",
+      "usa": "BIIB",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BMY",
+      "usa": "BMY",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CAH",
+      "usa": "CAH",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CVS",
+      "usa": "CVS",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DHR",
+      "usa": "DHR",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GILD",
+      "usa": "GILD",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GSK",
+      "usa": "GSK",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "HIMS",
+      "usa": "HIMS",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IBB",
+      "usa": "IBB",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ISRG",
+      "usa": "ISRG",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "JNJ",
+      "usa": "JNJ",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LLY",
+      "usa": "LLY",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MDT",
+      "usa": "MDT",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MRK",
+      "usa": "MRK",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MRNA",
+      "usa": "MRNA",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NVO",
+      "usa": "NVO",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NVS",
+      "usa": "NVS",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PFE",
+      "usa": "PFE",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PHG",
+      "usa": "PHG",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TEM",
+      "usa": "TEM",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TMO",
+      "usa": "TMO",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UNH",
+      "usa": "UNH",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VRTX",
+      "usa": "VRTX",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLV",
+      "usa": "XLV",
+      "sector": "Salud y biotecnología",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ADI",
+      "usa": "ADI",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ALAB",
+      "usa": "ALAB",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AMAT",
+      "usa": "AMAT",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AMD",
+      "usa": "AMD",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ARM",
+      "usa": "ARM",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ASML",
+      "usa": "ASML",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AVGO",
+      "usa": "AVGO",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "INTC",
+      "usa": "INTC",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "LRCX",
+      "usa": "LRCX",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MRVL",
+      "usa": "MRVL",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MU",
+      "usa": "MU",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NVDA",
+      "usa": "NVDA",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "QCOM",
+      "usa": "QCOM",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SMH",
+      "usa": "SMH",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SMSN",
+      "usa": null,
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SNDK",
+      "usa": "SNDK",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SWKS",
+      "usa": "SWKS",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TSM",
+      "usa": "TSM",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TXN",
+      "usa": "TXN",
+      "sector": "Semiconductores",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ACN",
+      "usa": "ACN",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ADBE",
+      "usa": "ADBE",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ADP",
+      "usa": "ADP",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AI",
+      "usa": "AI",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CRM",
+      "usa": "CRM",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CRWV",
+      "usa": "CRWV",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DOCU",
+      "usa": "DOCU",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GLOB",
+      "usa": "GLOB",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IBM",
+      "usa": "IBM",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "INFY",
+      "usa": "INFY",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "MSFT",
+      "usa": "MSFT",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NBIS",
+      "usa": "NBIS",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NOW",
+      "usa": "NOW",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ORCL",
+      "usa": "ORCL",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PATH",
+      "usa": "PATH",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "PLTR",
+      "usa": "PLTR",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SAP",
+      "usa": "SAP",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SNOW",
+      "usa": "SNOW",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TEAM",
+      "usa": "TEAM",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TWLO",
+      "usa": "TWLO",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ZM",
+      "usa": "ZM",
+      "sector": "Software y cloud",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AAPL",
+      "usa": "AAPL",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ANET",
+      "usa": "ANET",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CIBR",
+      "usa": "CIBR",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CRWD",
+      "usa": "CRWD",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DISN",
+      "usa": "DISN",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "GOOGL",
+      "usa": "GOOGL",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "IREN",
+      "usa": "IREN",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "META",
+      "usa": "META",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "NFLX",
+      "usa": "NFLX",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "SPOT",
+      "usa": "SPOT",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLC",
+      "usa": "XLC",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "XLK",
+      "usa": "XLK",
+      "sector": "Tecnología e internet",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AMX",
+      "usa": "AMX",
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "T",
+      "usa": "T",
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TIMB",
+      "usa": "TIMB",
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TIMS3",
+      "usa": null,
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TMUS",
+      "usa": "TMUS",
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VIV",
+      "usa": "VIV",
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VIVT3",
+      "usa": null,
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "VOD",
+      "usa": "VOD",
+      "sector": "Telecomunicaciones",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "AAL",
+      "usa": "AAL",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ABNB",
+      "usa": "ABNB",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "ASR",
+      "usa": "ASR",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "BKNG",
+      "usa": "BKNG",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CAAP",
+      "usa": "CAAP",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CAR",
+      "usa": "CAR",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "CCL",
+      "usa": "CCL",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "DAL",
+      "usa": "DAL",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TCOM",
+      "usa": "TCOM",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "TRIP",
+      "usa": "TRIP",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UAL",
+      "usa": "UAL",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    },
+    {
+      "ticker": "UBER",
+      "usa": "UBER",
+      "sector": "Turismo y viajes",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Todavía no se ejecutó la automatización."
+      ],
+      "cedear_verificado": false
+    }
+  ],
+  "sectors": [
+    {
+      "sector": "Aeroespacial y defensa",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Agro",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Bancos",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Consumo básico",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Consumo discrecional",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Cripto y activos digitales",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Energía",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Finanzas y pagos",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Industriales",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Materiales y minería",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Salud y biotecnología",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Semiconductores",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Software y cloud",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Tecnología e internet",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Telecomunicaciones",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Turismo y viajes",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    },
+    {
+      "sector": "Índices y ETFs",
+      "proxy": "—",
+      "signal": "SIN DATOS",
+      "tone": "neutral",
+      "data": null,
+      "reasons": [
+        "Pendiente del primer corte"
+      ]
+    }
+  ]
+}
