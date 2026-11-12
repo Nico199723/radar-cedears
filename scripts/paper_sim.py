@@ -206,7 +206,7 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
         from radar_features import high_score_precaution
         allowed,why=high_score_precaution(d,market,vix,True)
         if allowed:
-            return True,"COMPRA CON PRECAUCIÓN · SCORE >=75 · EXPOSICIÓN REDUCIDA"
+            return True,"COMPRA CON PRECAUCIÓN · SCORE >=75 + SMA21/SEMANAL/VOLUMEN · EXPOSICIÓN REDUCIDA"
     if market!="FAVORABLE":
         # Compras con 70–74.9 sólo si cumplen gatillo completo.
         from radar_features import cautious_signal
