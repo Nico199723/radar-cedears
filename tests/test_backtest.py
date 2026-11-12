@@ -34,6 +34,31 @@ class BacktestTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 download(["AAA","CCC"],5,str(folder))
 
+    def test_tamanio_prudente_y_stop_mas_corto(self):
+        f=frame([100,100,100],lows=[99,98,98])
+        entry={f.index[0]:{"signal":"COMPRA CON PRECAUCIÓN","stop":80},
+               f.index[1]:{"signal":"REDUCIR / EVITAR","stop":80}}
+        trades,eq=simulate(f,entry,"TEST",fee_bps=0,slippage_bps=0,paper_sizing=True)
+        self.assertEqual(len(trades),1)
+        self.assertEqual(trades[0].stop,94)
+        self.assertEqual(trades[0].entry,100)
+        self.assertAlmostEqual(eq.iloc[1],1,places=4)
+        # Si ejecuta un stop del 6%, el capital total sólo arriesga el 6% de la cartera.
+        fell=frame([100,100,94],lows=[99,99,92])
+        orders={fell.index[0]:{"signal":"COMPRA CON PRECAUCIÓN","stop":80}}
+        trades,eq=simulate(fell,orders,"TEST",fee_bps=0,slippage_bps=0,paper_sizing=True)
+        self.assertEqual(trades[0].exit_reason,"STOP/GAP")
+        self.assertEqual(trades[0].stop,94)
+        self.assertAlmostEqual(trades[0].net_return_pct,-6,places=2)
+        self.assertAlmostEqual(eq.iloc[-1],1-.06*.06,places=5)
+
+    def test_tamanio_normal_250_de_2000_y_stop_ocho(self):
+        f=frame([100,100,92],lows=[99,99,90])
+        sig={f.index[0]:{"signal":"COMPRA CONDICIONAL","stop":80}}
+        t,eq=simulate(f,sig,"TEST",fee_bps=0,slippage_bps=0,paper_sizing=True)
+        self.assertEqual(t[0].stop,92)
+        self.assertAlmostEqual(eq.iloc[-1],1-.125*.08,places=5)
+
     def test_entrada_se_ejecuta_en_open_t_mas_uno(self):
         f = frame([100,105,110,120], lows=[99,104,109,119])
         signals={f.index[0]:{"signal":"COMPRA CONDICIONAL","stop":90},
