@@ -122,40 +122,27 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
             if not np.isfinite(m) or p<=m:break
             age+=1
     slope3=(ma21/float(ma.iloc[-4])-1)*100
-    # Primera vela sobre SMA21 tiene prima; después se agota por maduración.
-    # No equivale a comprar cualquier cruce: la distancia en ATR evita perseguir.
-    if down:
-        base,state=7,"CRUCE BAJISTA"
-    elif not above:
-        base,state=22,"BAJO SMA21"
-    elif age==1:
-        base,state=94,"CRUCE ALCISTA"
-    elif age<=3:
-        base,state=88,"CRUCE RECIENTE · "+str(age)+" RUEDAS"
-    elif age<=6:
-        base,state=79,"SOBRE SMA21 · "+str(age)+" RUEDAS"
-    elif age<=9:
-        base,state=70,"SOBRE SMA21 · "+str(age)+" RUEDAS"
-    elif age<=14:
-        base,state=58,"TENDENCIA MADURA · "+str(age)+" RUEDAS"
-    else:
-        base,state=46,"TENDENCIA EXTENDIDA · "+str(age)+" RUEDAS"
-    # La inclinación de la SMA cuenta, sin bonus automático por sobrecompra.
-    if slope3>=.45:
-        base+=7
-    elif slope3>0:
-        base+=3
-    elif slope3<-.45:
-        base-=11
-    elif slope3<0:
-        base-=6
-    # Un cruce muy estirado no tiene ventaja simplemente por ser reciente.
+    # Espectro continuo: distancia normalizada por ATR, edad y pendiente.
+    # Sin escalones de 94 a 88 o de 79 a 70 por una sola rueda.
     distance_atr=None
-    if atr is not None and math.isfinite(float(atr)) and float(atr)>0:
-        distance_atr=(price-ma21)/float(atr)
-        if distance_atr>2.0:base-=20
-        elif distance_atr>1.4:base-=11
-        elif up and distance_atr>=.2:base+=4
+    effective_atr=(float(atr) if atr is not None and math.isfinite(float(atr))
+                   and float(atr)>0 else max(.01,price*.02))
+    distance_atr=(price-ma21)/effective_atr
+    recency=math.exp(-max(0,age-1)/7.0) if above else 0.
+    # En el cruce: transición suave y control de distancia. 1.5 ATR es fuerte.
+    location=50+40*math.tanh(distance_atr/.55)
+    age_drag=27*(1-math.exp(-max(0,age-1)/7.5)) if above else 0.
+    fresh_bonus=8*recency*cap(distance_atr/.6,0,1)
+    slope_effect=8*math.tanh(slope3/.5)
+    extension_cost=20*(1-math.exp(-max(0.,distance_atr-1.15)/.65))
+    base=location-age_drag+fresh_bonus+slope_effect-extension_cost
+    if up:state="CRUCE ALCISTA · 1 RUEDA"
+    elif down:state="CRUCE BAJISTA"
+    elif not above:state="BAJO SMA21"
+    elif age<=3:state=f"CRUCE RECIENTE · {age} RUEDAS"
+    elif age<=9:state=f"SOBRE SMA21 · {age} RUEDAS"
+    elif age<=14:state=f"TENDENCIA MADURA · {age} RUEDAS"
+    else:state=f"TENDENCIA EXTENDIDA · {age} RUEDAS"
     # Vigilar cambios de pendiente *antes* de un cruce bajista formal.
     penalty,reasons=0,[]
     delta1=delta3=macd1=macd3=None
@@ -165,7 +152,7 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
             delta1=float(r.iloc[-1]-r.iloc[-2])
             delta3=float(r.iloc[-1]-r.iloc[-4])
             # Caída leve ya resta; una caída pronunciada de 3 ruedas resta más.
-            loss=min(12,(2 if delta1<0 else 0)+min(10,round(max(0,-delta3)*1.2)))
+            loss=min(12.,2.2*max(0.,-delta1)+.95*max(0.,-delta3))
             if loss:
                 penalty+=loss
                 reasons.append(f"RSI diario pierde pendiente (1r {delta1:+.1f}, 3r {delta3:+.1f}): -{loss}")
@@ -174,10 +161,11 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
         if all(math.isfinite(float(x)) for x in (m.iloc[-1],m.iloc[-2],m.iloc[-4])):
             macd1=float((m.iloc[-1]-m.iloc[-2])/price*100)
             macd3=float((m.iloc[-1]-m.iloc[-4])/price*100)
-            loss=min(12,(2 if macd1<0 else 0)+min(10,round(max(0,-macd3)*70)))
+            loss=min(12.,28*max(0.,-macd1)+44*max(0.,-macd3))
             if loss:
                 penalty+=loss
                 reasons.append(f"Histograma MACD pierde pendiente (1r {macd1:+.3f}%, 3r {macd3:+.3f}%): -{loss}")
+    penalty=round(penalty,2)
     return {"ma21":round(ma21,3),"ma21_prev":round(previous_ma21,3),
             "cross_up21":up,"cross_down21":down,"sma21_state":state,
             "sma21_component":round(cap(base,0,100),2),
@@ -192,39 +180,42 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
 
 
 
-def score_penalties(row: dict) -> tuple[int,list[str]]:
-    """Deducciones transparentes por extremos de RSI y ruptura SMA200."""
-    penalty=int(row.get("indicator_slope_penalty") or 0)
+def score_penalties(row: dict) -> tuple[float,list[str]]:
+    """Descuentos graduales sin saltos por RSI 69.9/70 ni SMA200 0.01%.
+
+    RSI14 diario: curva continua, con castigo de 30 puntos en 80.
+    SMA200: castigo creciente según distancia porcentual bajo media.
+    Pérdida de pendiente RSI/MACD resta antes del cruce, proporcional al giro.
+    """
+    penalty=float(row.get("indicator_slope_penalty") or 0)
     reasons=list(row.get("indicator_slope_reasons") or [])
     daily=row.get("rsi14d")
-    if daily is not None:
-        if daily>=80: x=30
-        elif daily>=75: x=22
-        elif daily>=70: x=12
-        elif daily>=67: x=5
-        elif daily<=25: x=24
-        elif daily<=30: x=17
-        elif daily<=35: x=10
-        elif daily<=40: x=5
-        else:x=0
-        if x:
+    if daily is not None and math.isfinite(float(daily)):
+        points=[(0,28),(25,24),(30,17),(35,10),(40,5),(44,0),
+                (64,0),(67,4),(70,12),(75,22),(80,30),(90,37),(100,42)]
+        x=float(np.interp(float(daily),[p[0] for p in points],[p[1] for p in points]))
+        if x>=.05:
             penalty+=x
-            reasons.append(f"RSI14 diario {daily:.1f}: -{x}")
+            reasons.append(f"RSI14 diario {float(daily):.1f}: -{x:.1f}")
     weekly=row.get("rsi21w")
-    if weekly is not None and (weekly>=75 or weekly<=30):
-        penalty+=8
-        reasons.append("RSI21 semanal extremo: -8")
+    if weekly is not None and math.isfinite(float(weekly)):
+        w=cap((float(weekly)-65)*.8,0,10)+cap((35-float(weekly))*.8,0,10)
+        if w>=.05:
+            penalty+=w
+            reasons.append(f"RSI21 semanal en extremo: -{w:.1f}")
     monthly=row.get("rsi21m")
-    if monthly is not None and (monthly>=75 or monthly<=25):
-        penalty+=8
-        reasons.append("RSI21 mensual extremo: -8")
+    if monthly is not None and math.isfinite(float(monthly)):
+        m=cap((float(monthly)-68)*.8,0,10)+cap((32-float(monthly))*.8,0,10)
+        if m>=.05:
+            penalty+=m
+            reasons.append(f"RSI21 mensual en extremo: -{m:.1f}")
     price,ma200=row.get("price"),row.get("ma200")
-    if price is not None and ma200 is not None and ma200>0 and price<ma200:
-        below=(1-price/ma200)*100
-        x=min(30,20+int(below//2))
+    if price is not None and ma200 is not None and float(ma200)>0 and float(price)<float(ma200):
+        below=(1-float(price)/float(ma200))*100
+        x=26*(1-math.exp(-below/3.6))
         penalty+=x
-        reasons.append(f"Bajo SMA200 ({below:.1f}%): -{x}")
-    return penalty,reasons
+        reasons.append(f"Bajo SMA200 ({below:.1f}%): -{x:.1f}")
+    return round(penalty,2),reasons
 
 
 def opportunity_score(row: dict, is_stock: bool=True) -> int | None:
@@ -254,7 +245,12 @@ def opportunity_score(row: dict, is_stock: bool=True) -> int | None:
         "volume":round(.20*volume,2),
         "penalty":-penalty,
     }
-    return round(cap(pre-penalty,0,100))
+    final=round(cap(pre-penalty,0,100),1)
+    row["rank_raw"]=round(pre,2)
+    row["rank_level"]=("PRIORIDAD PARA ESTUDIAR" if final>=78 else
+                       "CANDIDATA PARA VIGILAR" if final>=62 else
+                       "FUERA DE RANGO DE COMPRA")
+    return final
 
 
 def ranking_stock_21(row: dict) -> int | None:
