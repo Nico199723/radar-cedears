@@ -350,8 +350,15 @@ def main():
         if signal=="COMPRA CON PRECAUCIÓN" and val and val.get("rank_score",0)>=75:
             candidate["level"]="COMPRA PRUDENTE · SCORE ≥75"
             candidate["blockers"]=[]
+        plan=risk_policy(macro,vixvalue).copy()
+        if signal=="COMPRA CON PRECAUCIÓN" and plan["mode"]=="NORMAL":
+            # Score >=75 sin gatillo clásico: la macro favorable no convierte
+            # una entrada precautoria en una posición de tamaño normal.
+            plan.update(mode="PRUDENTE",max_position_usd=120,
+                        reserve_usd=1400,reserve_pct=70,stop_pct=6,
+                        max_positions=2,max_per_sector=1)
         assets.append({
-            'risk_plan_paper':risk_policy(macro,vixvalue),
+            'risk_plan_paper':plan,
             'candidate':candidate,
             'ticker':item['cedear'], 'usa':us or None, 'sector':item['sector'],
             'cedear_verificado':False, # Catálogo curado NO sustituye PDF oficial BYMA
