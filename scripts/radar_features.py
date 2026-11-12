@@ -193,7 +193,7 @@ def ranking_score(row: dict) -> int | None:
 
 def cautious_signal(row: dict | None, market: str, vix: float | None,
                     fresh: bool, base_signal: str) -> tuple[str, str, str | None]:
-    """Excepción macro *condicional*; no compra por score ni por mercado solo.
+    """Excepción macro condicional para acciones Y ETFs; no compra por score solo.
 
     Activar sólo con precio sobre SMA21/SMA50/SMA200, semanal firme, RSI/MACD,
     volumen y gatillo diario. Un VIX >=25 o macro desconocido sigue bloqueando.
@@ -215,6 +215,13 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
         return base_signal, "neutral", None
     strong=(
         row.get("score",0)>=70
+        and row.get("rank_score") is not None and row["rank_score"]>=63
+        and row.get("rs_verified") is True
+        and row.get("rs_score",0)>=50
+        and row.get("rs_spy20",-999)>=-2
+        and row.get("rs_qqq20",-999)>=-2
+        and row.get("volume_confirm_score",0)>=55
+        and row.get("rank_penalty",0)<20
         and row.get("rsi14d") is not None and 46<=row["rsi14d"]<=70
         and row.get("rsi21w") is not None and row["rsi21w"]>=48
         and row.get("macd_hist_d") is not None and row["macd_hist_d"]>0
@@ -236,7 +243,7 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
     continuation=(
         row["stretch_atr20"]>=0 and row["stretch_atr20"]<=1.0
         and row["rvol20"]>=.90 and row["rsi14d"]<=64
-        and row.get("rank_score") is not None and row["rank_score"]>=70
+        and row.get("rank_score") is not None and row["rank_score"]>=65
     )
     gate=bool(row.get("cross_up21") or row.get("near20")
               or row.get("breakout") or continuation)
@@ -256,25 +263,26 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
     spy_roc=spy.get("roc20") if spy else None
     for a in assets:
         d=a.get("data")
-        if not d or not a.get("usa") or a.get("sector")=="Índices y ETFs":
+        if not d or not a.get("usa"):
             continue
         rank=d.get("rank_score")
         dollar=d.get("dollar_volume20")
-        if rank is None or dollar is None or dollar<5_000_000:
+        if rank is None or rank<58 or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
             continue
         if d.get("score",0)<65 or d.get("price",0)<=d.get("ma200",float("inf")):
             continue
-        if d.get("rsi14d") is None or d["rsi14d"]>74:
+        if d.get("rsi14d") is None or not(35<d["rsi14d"]<75):
             continue
         if d.get("macd_hist_d",0)<0:
             continue
         if a.get("signal","").startswith(("REDUCIR","SALIR","DATOS","SIN")):
             continue
-        relative=round(d["roc20"]-spy_roc,2) if spy_roc is not None and d.get("roc20") is not None else None
+        relative=d.get("rs_spy20")
         # Regla de desempate declarada. Divergencia vs SPY en 20 ruedas, no
         # una estimación de alpha futura.
         priority = rank + (7 if d.get("cross_up21") else 0) + (5 if d.get("near20") else 0) + (6 if d.get("breakout") else 0)
         priority += cap((relative or 0)/3, -4, 4)
+        priority += cap((d.get("rs_qqq20") or 0)/3, -4, 4)
         if d.get("stretch_atr20") is not None and d["stretch_atr20"]>2:
             priority -= 6
         if d.get("rvol20") is not None and d["rvol20"]<0.65:
@@ -301,7 +309,10 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
             "rank_score":d["rank_score"],"score":d["score"],
             "price":d["price"],"ma20":d["ma20"],"invalid_usd":d.get("invalid_usd"),
             "target_2r":d.get("target_2r"),
-            "relative_spy20":relative,"rvol20":d.get("rvol20"),"ma21":d.get("ma21"),"sma21_state":d.get("sma21_state"),
+            "relative_spy20":relative,"relative_qqq20":d.get("rs_qqq20"),
+            "rs_score":d.get("rs_score"),"volume_confirm_score":d.get("volume_confirm_score"),
+            "rank_penalty":d.get("rank_penalty"),"rank_penalty_reasons":d.get("rank_penalty_reasons"),
+            "rvol20":d.get("rvol20"),"ma21":d.get("ma21"),"sma21_state":d.get("sma21_state"),
             "dollar_volume20":d.get("dollar_volume20"),"signal":a["signal"],"tag":tag,
             "earnings":e,"date":d.get("date"),
         })
