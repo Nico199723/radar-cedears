@@ -26,7 +26,9 @@ def asset(day,code="AAA",sector="Tecnología e internet",price=100):
     data={"asset_kind":"ACCION","date":day,"price":price,"ma21":99,"ma50":93,"ma200":87,
           "score":82,"rank_score":88,"rsi14d":58,"macd_hist_d":.2,
           "rvol20":1.2,"dollar_volume20":60_000_000,"obv_up10":True,
-          "stretch_atr20":.3,"cross_up21":True,"rsi21w":59,"macd_hist_w":.3}
+          "stretch_atr20":.3,"cross_up21":True,"rsi21w":59,"macd_hist_w":.3,
+          "rs_verified":True,"rs_score":70,"rs_spy20":5,"rs_qqq20":4,
+          "rank_penalty":0,"volume_confirm_score":85}
     return {"ticker":code,"usa":code,"sector":sector,"signal":"ESPERAR MACRO",
             "earnings":None,"data":data}
 
@@ -126,13 +128,17 @@ class PaperTests(unittest.TestCase):
         a["data"]["macd_hist_w"]=-.1
         self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
 
-    def test_no_balance_or_etf_entries(self):
+    def test_balance_blocks_and_etf_can_enter_with_caution(self):
         a=asset(self.days[1])
         a["earnings"]={"days_until":5}
         self.assertFalse(evaluate_entry(a,"FAVORABLE",16)[0])
         a["earnings"]=None
         a["data"]["asset_kind"]="ETF / INDICE / NO CLASIFICADO"
-        self.assertFalse(evaluate_entry(a,"FAVORABLE",16)[0])
+        a["ticker"]="IBB";a["usa"]="IBB";a["sector"]="Índices y ETFs"
+        self.assertTrue(evaluate_entry(a,"DEFENSIVO",18)[0])
+        self.assertTrue(evaluate_entry(a,"FAVORABLE",16)[0])
+        a["data"]["rsi14d"]=80
+        self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
 
     def test_cash_reserve_and_four_max_slots(self):
         s=new_ledger(self.days[0],"2026-11-10T20:00:00Z")
