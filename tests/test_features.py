@@ -66,7 +66,7 @@ class FeatureTests(unittest.TestCase):
         self.assertIsNone(ranking_score({"score":80,"volume_score":None}))
 
     def _sample(self):
-        return {"score":85,"price":100,"ma20":99,"ma50":96,"ma200":90,
+        return {"score":85,"price":100,"ma20":99,"ma21":98,"ma50":96,"ma200":90,
                 "rsi14d":57,"rsi21w":58,"macd_hist_d":.4,"macd_hist_w":.2,
                 "rvol20":1.4,"dollar_volume20":25_000_000,"obv_up10":True,
                 "stretch_atr20":.5,"near20":True,"breakout":False}
