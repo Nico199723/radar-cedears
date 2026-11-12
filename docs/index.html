@@ -27,6 +27,20 @@
       <div class="stat"><span class="stat-label">UNIVERSO CEDEARs</span><strong id="assetCount">—</strong><small id="mappedCount">Mapeo USA / USD</small></div>
       <div class="stat"><span class="stat-label">COBERTURA DE PRECIOS</span><strong id="coverageCount">—</strong><small>Datos históricos descargados</small></div>
     </section>
+    <aside class="martin-card" aria-labelledby="martinTitle">
+      <div class="martin-heading">
+        <div class="martin-heading-text">
+          <span class="martin-eyebrow">HUMOR DE MERCADO · EDICIÓN ASTS</span>
+          <h2 id="martinTitle">Las máximas de Martín <span aria-hidden="true">🚀</span></h2>
+        </div>
+        <span class="martin-count" id="martinCount" aria-label="Frase 1 de 12">01 / 12</span>
+      </div>
+      <p class="martin-quote" id="martinQuote" aria-live="off">«Martín compró ASTS para ir a la Luna. El -40% lo dejó en el subsuelo.»</p>
+      <div class="martin-bottom">
+        <span>Chistes entre amigos; no son señales de trading.</span>
+        <button type="button" class="martin-next" id="martinNext" aria-label="Ver otra máxima de Martín">Otra máxima ↻</button>
+      </div>
+    </aside>
     <nav class="tabs" aria-label="Vistas del radar">
       <button class="tab active" data-tab="acciones" aria-current="page">Acciones y ETFs</button>
       <button class="tab" data-tab="sectores">Radar sectorial</button>
@@ -38,7 +52,7 @@
       <div class="filters">
         <label class="filter search"><span>Buscar CEDEAR o subyacente</span><input id="searchInput" type="search" placeholder="Ej. NVDA, MSFT, XLE, MU…"></label>
         <label class="filter"><span>Sector</span><select id="sectorFilter"><option value="">Todos los sectores</option></select></label>
-        <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compra / vigilar</option><option value="esperar">Esperar</option><option value="mantener">Mantener</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
+        <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compra / vigilar</option><option value="esperar">HOLD / ESPERAR</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
         <label class="filter"><span>Ordenar</span><select id="sortFilter"><option value="score">Mejor score técnico</option><option value="worst">Peor score técnico</option><option value="ticker">Ticker A–Z</option><option value="signal">Señal de acción</option></select></label>
       </div>
       <div class="tablebox"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>RSI14 D</th><th>MACD D</th><th>Score</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="7">Esperando datos del primer workflow…</td></tr></tbody></table></div>
@@ -48,6 +62,7 @@
     <section id="pageCartera" class="page hidden"><div class="block-head"><div><span class="eyebrow">GUARDADO SÓLO EN ESTE NAVEGADOR</span><h2>Mi seguimiento</h2></div></div><p class="muted">Marcá acciones desde una ficha con «Seguir / tengo». Sólo se guarda el ticker en este navegador; no cargamos tus cantidades, saldos ni datos de los brokers a GitHub.</p><div id="watchRows" class="watch-grid"></div></section>
     <section id="pageMetodo" class="page hidden"><div class="block-head"><div><span class="eyebrow">REGLAS EXPLÍCITAS</span><h2>Cómo decidimos</h2></div></div>
       <div class="method-grid">
+      <article><h3>HOLD / ESPERAR</h3><p>Unifica los anteriores estados «Esperar» y «Mantener / esperar», incluso cuando el filtro macro bloquea entradas. No indica mantener una posición particular: hay que revisar tesis, precio de entrada y riesgo.</p></article>
       <article><h3>La compra no es un score</h3><p>Requiere tendencia alcista (precio &gt; SMA50 &gt; SMA200), score ≥73, RSI14 diario entre 46–70, histograma MACD positivo, mercado favorable y señal de pullback/reacción cerca de SMA20 o ruptura validada de 20 sesiones con volumen.</p></article>
       <article><h3>Macro que habilita</h3><p>Filtro automático inicial: SPY y QQQ por encima de su SMA50 y VIX menor a 25. Si está mixto, defensivo o sin validar, no se emite compra nueva. No sustituye FED, BOJ, yen carry trade ni revisión de noticias.</p></article>
       <article><h3>Salida técnica</h3><p>REDUCIR si se debilita la estructura por debajo de SMA50 con RSI/MACD negativos; SALIR / EVITAR si cae debajo de SMA200, RSI &lt;40 y MACD negativo. No implica orden automática ni reemplaza el contexto de tu posición.</p></article>
