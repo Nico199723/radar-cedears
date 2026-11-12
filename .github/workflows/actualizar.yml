@@ -1,0 +1,58 @@
+name: Actualizar radar CEDEARs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "config/**"
+      - "scripts/**"
+      - "requirements.txt"
+      - ".github/workflows/actualizar.yml"
+  schedule:
+    - cron: "0 13 * * *"
+      timezone: "America/Argentina/Buenos_Aires"
+    - cron: "5 18 * * *"
+      timezone: "America/Argentina/Buenos_Aires"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-radar
+  cancel-in-progress: false
+
+jobs:
+  actualizar-y-publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Validar configuracion
+        run: python scripts/actualizar.py --check
+      - name: Tests del motor sin conexión
+        run: python -m unittest discover -s tests -v
+      - name: Descargar mercado USD y calcular señales
+        run: python scripts/actualizar.py
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Subir sitio como artefacto
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+      - name: Publicar sitio
+        id: deploy
+        uses: actions/deploy-pages@v4
