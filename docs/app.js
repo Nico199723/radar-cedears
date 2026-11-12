@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const storeKey='radar_cedears_watch_v1';
-let dataset=null,view='acciones',tracked=new Set(),selected=null;
+let dataset=null,view='acciones',tracked=new Set(),selected=null,paper=null;
 try{tracked=new Set(JSON.parse(localStorage.getItem(storeKey)||'[]'));}catch(e){}
 const esc=v=>String(v==null?'—':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const usd=v=>(v==null||!Number.isFinite(Number(v)))?'—':'US$ '+Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:3});
@@ -20,7 +20,7 @@ const eventHtml=x=>{
 const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=72?'good':v<35?'bad':''}">${esc(v)}</span>`;
 const day=(s)=>{if(!s)return '—';try{return new Date(s+'T12:00:00').toLocaleDateString('es-AR')}catch(e){return s}};
 const group=s=>{s=String(s||'');if(s.includes('COMPRA')||s.includes('VIGILAR'))return 'compra';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'esperar';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
-function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['sectores','pageSectores'],['cartera','pageCartera'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
+function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['sectores','pageSectores'],['cartera','pageCartera'],['simulador','pageSimulador'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
 function baseline(){return {meta:{source:'Catálogo local · pendiente de ejecución inicial',universe_size:0,mapped_us:0,download_coverage:0},macro:{state:'NO VERIFICADO'},assets:[],sectors:[]}}
 function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];const generated=m.generated_at_ar?new Date(m.generated_at_ar):null;const age=generated?(Date.now()-generated.getTime())/(3600000):9999;const coverage=Number(m.download_coverage||0);
  const fresh=generated&&age<=36&&age>=-1;const banner=$('criticalBanner');
@@ -116,6 +116,61 @@ if($('martinNext')){
   },12000);
 }
 
+
+const signedUsd=v=>(v==null?'—':(Number(v)>=0?'+':'−')+usd(Math.abs(Number(v))));
+const signedPct=v=>(v==null?'—':(Number(v)>0?'+':'')+fmt(v)+'%');
+function linePaper(points){
+ const a=points.filter(x=>x&&Number.isFinite(Number(x.equity)));
+ if(a.length<2)return '<p class="muted">La curva del patrimonio aparecerá con los próximos cierres registrados.</p>';
+ const values=a.map(x=>Number(x.equity));
+ const lo=Math.min(...values),hi=Math.max(...values);
+ const span=Math.max(1,hi-lo),N=a.length;
+ const path=a.map((x,i)=>{
+   const xx=(15+i*570/(N-1)).toFixed(2);
+   const yy=(120-(Number(x.equity)-lo)/span*105).toFixed(2);
+   return (i?'L':'M')+xx+' '+yy;
+ }).join(' ');
+ return '<svg class="paper-svg" viewBox="0 0 600 140" role="img" aria-label="Evolución del patrimonio simulado USD"><line x1="15" y1="120" x2="585" y2="120" stroke="#395168" stroke-width="1"/><path fill="none" stroke="#48d7bd" stroke-width="2.4" d="'+path+'"/></svg><div class="paper-graph-caption">Desde '+esc(day(a[0].date))+' hasta '+esc(day(a[a.length-1].date))+' · '+fmt(lo)+' a '+fmt(hi)+' USD</div>';
+}
+function renderPaper(){
+ const root=$('paperStatus');
+ if(!paper){
+   root.className='paper-status paper-warn';
+   root.textContent='Todavía no hay ledger simulado publicado, o no se pudo recuperar el archivo. No inventamos operaciones.';
+   return;
+ }
+ const p=paper;
+ const outdated=Date.now()-Date.parse((p.last_closed_session||'')+'T23:59:59Z')>6*86400000;
+ root.className='paper-status'+(outdated?' paper-warn':'');
+ root.textContent=(outdated?'Registro con último cierre antiguo. ':'')+'Cartera 100% ficticia. Señales de cierre, ejecución al OPEN siguiente, stop 8% con posible gap adverso. No son órdenes reales.';
+ $('paperCut').textContent='Última rueda registrada: '+day(p.last_closed_session);
+ $('paperEquity').textContent=usd(p.equity_usd);
+ $('paperCash').textContent=usd(p.cash_usd);
+ $('paperReturn').textContent=signedPct(p.return_pct)+' ('+signedUsd(p.equity_usd-p.initial_capital_usd)+')';
+ $('paperReturn').className=Number(p.return_pct)>=0?'sma21-up':'sma21-down';
+ $('paperTrades').textContent=String(p.closed_count??0)+(p.win_rate_pct==null?'':' · acierto '+fmt(p.win_rate_pct)+'%');
+ $('paperDD').textContent=fmt(p.max_drawdown_pct)+'%';
+ $('paperGraph').innerHTML=linePaper(p.equity_history||[]);
+ const pos=p.open_positions||[];
+ $('paperPositions').innerHTML=pos.length?pos.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.last_price_usd)}</td><td>${usd(x.stop_usd)}</td><td class="${x.unrealized_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.unrealized_usd)}</td><td>${esc(x.sessions_held)}</td></tr>`).join(''):'<tr><td colspan="8">Sin posiciones abiertas. El efectivo queda en reserva mientras no aparezcan condiciones.</td></tr>';
+ const closed=[...(p.closed_trades||[])].reverse();
+ $('paperClosed').innerHTML=closed.length?closed.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${day(x.exit_date)}</td><td>${esc(x.holding_sessions)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.exit_usd)}</td><td class="${x.pnl_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.pnl_usd)}</td><td>${signedPct(x.return_pct)}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="10">Todavía no se cerraron operaciones simuladas.</td></tr>';
+ const fills=[...(p.fills||[])].reverse();
+ $('paperFills').innerHTML=fills.length?fills.map(x=>`<tr><td>${day(x.date)}</td><td>${esc(x.usa)}</td><td><span class="pill ${x.action==='STOP LOSS'?'down':x.action.startsWith('COMPRA')?'up':'hold'}">${esc(x.action)}</span></td><td>${usd(x.price_usd)}</td><td>${fmt(x.shares)}</td><td>${usd(x.amount_usd)}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="7">Todavía no hay compras ni ventas ejecutadas en la simulación.</td></tr>';
+ const waiting=p.pending_orders||[];
+ $('paperPending').innerHTML=waiting.length?waiting.map(x=>`<tr><td>${day(x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(x.side==='BUY'?'COMPRA '+(x.tranche||1)+'/3':'VENTA')}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="4">Sin órdenes pendientes para el próximo open.</td></tr>';
+}
+async function loadPaper(){
+ try{
+   const r=await fetch('./paper.json?refresh='+Date.now(),{cache:'no-store'});
+   if(!r.ok)throw new Error('HTTP '+r.status);
+   const j=await r.json();
+   if(j.is_simulated!==true||j.initial_capital_usd!==2000)throw new Error('Estado inválido');
+   paper=j;
+ }catch(e){paper=null}
+ renderPaper();
+}
+
 async function load(){dataset=baseline();try{const r=await fetch('./data.json?refresh='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!Array.isArray(j.assets)||!Array.isArray(j.sectors))throw new Error('Formato inválido');
  // Si falla GitHub Actions y el sitio quedó con datos de una ejecución vieja,
  // se BLOQUEAN las señales de compra/venta, no alcanza sólo con un aviso arriba.
@@ -134,3 +189,4 @@ for(const el of document.querySelectorAll('.tab'))el.onclick=()=>setTab(el.datas
 for(const id of ['searchInput','sectorFilter','signalFilter','sortFilter'])$(id).addEventListener(id==='searchInput'?'input':'change',renderAssets);
 $('modalClose').onclick=()=>$('detailModal').close();$('detailModal').addEventListener('click',e=>{if(e.target===$('detailModal'))$('detailModal').close()});
 load();
+loadPaper();
