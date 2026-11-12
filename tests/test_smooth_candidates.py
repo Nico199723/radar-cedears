@@ -107,6 +107,33 @@ class SmoothScoreTests(unittest.TestCase):
         self.assertIn('value="priority"',html)
         self.assertIn('id="buyCaption"',html)
 
+    def test_smooth_score_does_not_silently_change_trade_gate(self):
+        from radar_features import cautious_signal
+        d=sample()
+        d.update(rank_score=92,rank_score_signal=45,rank_penalty_signal=0)
+        self.assertNotEqual(
+            cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+            "COMPRA CON PRECAUCIÓN")
+        d.update(rank_score=65,rank_score_signal=75)
+        self.assertEqual(
+            cautious_signal(d,"DEFENSIVO",18,True,"ESPERAR MACRO")[0],
+            "COMPRA CON PRECAUCIÓN")
+
+    def test_legacy_entry_rank_is_independent_of_new_display_score(self):
+        from radar_features import legacy_entry_rank
+        dates=pd.bdate_range("2026-01-01",periods=70)
+        c=pd.Series(np.linspace(100,105,70),index=dates)
+        r=pd.Series([54.]*70,index=dates)
+        macd=pd.Series([.12]*70,index=dates)
+        d=sample()
+        d.update(sma21_age=11,sma21_slope_pct3=.18,
+                 sma21_distance_atr=.65,volume_score=7,obv_up10=True)
+        old,penalty=legacy_entry_rank(c,r,macd,d,True)
+        d["rank_score"]=15
+        old2,penalty2=legacy_entry_rank(c,r,macd,d,True)
+        self.assertEqual((old,penalty),(old2,penalty2))
+        self.assertTrue(0<=old<=100)
+
     def test_paper_does_not_buy_just_because_candidate(self):
         from paper_sim import evaluate_entry
         x=sample()
