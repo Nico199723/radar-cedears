@@ -23,7 +23,7 @@
     <section id="criticalBanner" class="critical" role="status">Cargando estado de datos…</section>
     <section class="summary" aria-label="Resumen de mercado">
       <div class="stat"><span class="stat-label">CONTEXTO SPY / QQQ</span><strong id="macroValue">—</strong><small id="macroSub">Filtro macro global</small></div>
-      <div class="stat"><span class="stat-label">SEÑALES PARA ESTUDIAR</span><strong id="buyCount">—</strong><small>Compra condicional + vigilar</small></div>
+      <div class="stat"><span class="stat-label">SEÑALES PARA ESTUDIAR</span><strong id="buyCount">—</strong><small id="buyCaption">Compras confirmadas por setup, sin incluir vigilancia</small></div>
       <div class="stat"><span class="stat-label">UNIVERSO CEDEARs</span><strong id="assetCount">—</strong><small id="mappedCount">Mapeo USA / USD</small></div>
       <div class="stat"><span class="stat-label">COBERTURA DE PRECIOS</span><strong id="coverageCount">—</strong><small>Datos históricos descargados</small></div>
     </section>
@@ -64,12 +64,13 @@
       <div class="filters">
         <label class="filter search"><span>Buscar CEDEAR o subyacente</span><input id="searchInput" type="search" placeholder="Ej. NVDA, MSFT, XLE, MU…"></label>
         <label class="filter"><span>Sector</span><select id="sectorFilter"><option value="">Todos los sectores</option></select></label>
-        <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compra / vigilar</option><option value="esperar">HOLD / ESPERAR</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
-        <label class="filter"><span>Ordenar</span><select id="sortFilter"><option value="score">Mejor score técnico</option><option value="worst">Peor score técnico</option><option value="ticker">Ticker A–Z</option><option value="signal">Señal de acción</option></select></label>
+        <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compras (verdes)</option><option value="vigilancia">Candidatas a vigilar</option><option value="esperar">HOLD / ESPERAR</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
+        <label class="filter"><span>Ordenar</span><select id="sortFilter"><option value="priority">Prioridad: compras → vigilancia → resto</option><option value="score">Mayor Score Oportunidad</option><option value="worst">Menor Score Oportunidad</option><option value="ticker">Ticker A–Z</option><option value="signal">Señal de acción</option></select></label>
       </div>
       <div class="tablebox"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>SMA21 D</th><th>RSI14 D</th><th>MACD D</th><th>Score O.</th><th>RVOL20</th><th>Balance</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="10">Esperando datos del primer workflow…</td></tr></tbody></table></div>
       <div class="footline"><span>Hacé clic en cualquier fila para ver la tesis, gatillo, invalidación y objetivos.</span><span>Los datos son al último cierre diario confirmado; nunca a precio CEDEAR ARS.</span></div>
     </section>
+      <p class="top5-note"><strong>Semáforo de oportunidades:</strong> desde 62/100, vigilancia; desde 75/100, candidata prioritaria para estudiar. Sólo COMPRA CONDICIONAL y COMPRA CON PRECAUCIÓN cuentan como compra. El puntaje es continuo, no dispara órdenes ni elimina el riesgo.</p>
     <section id="pageSectores" class="page hidden"><div class="block-head"><div><span class="eyebrow">FUERZA RELATIVA POR ETF PROXY EN USD</span><h2>Mapa sectorial</h2></div><span class="muted">17 grupos de tu universo</span></div><div id="sectorCards" class="sector-grid"></div></section>
     <section id="pageCartera" class="page hidden"><div class="block-head"><div><span class="eyebrow">GUARDADO SÓLO EN ESTE NAVEGADOR</span><h2>Mi seguimiento</h2></div></div><p class="muted">Marcá acciones desde una ficha con «Seguir / tengo». Sólo se guarda el ticker en este navegador; no cargamos tus cantidades, saldos ni datos de los brokers a GitHub.</p><div id="watchRows" class="watch-grid"></div></section>
     <section id="pageSimulador" class="page hidden" aria-label="Track record en dólares simulado">

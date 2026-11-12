@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength, risk_policy
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength, risk_policy, buy_candidate, legacy_entry_rank
 from earnings import earnings_for_candidates, event_label
 from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
 from paper_store import load_or_initialize
@@ -197,6 +197,11 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
     result.update(volumes)
     result.update(sma21)
     result.update(rs)
+    # La estrategia de compras se conserva durante la prueba forward/OOS:
+    # mostrar Score Oportunidad nuevo sin alterar ocultamente el umbral actual.
+    old_rank,old_penalty=legacy_entry_rank(c,rsi_daily,macd_daily,result,is_stock)
+    result["rank_score_signal"]=old_rank
+    result["rank_penalty_signal"]=old_penalty
     result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)
     result["asset_kind"] = "ACCION" if is_stock else "ETF / INDICE / NO CLASIFICADO"
     return result
@@ -335,8 +340,16 @@ def main():
                 if note:why=why+[note]
         if not us:
             signal,tone,why='SIN SUBYACENTE USA','neutral',['No existe mapeo USD estadounidense confiable; no usar ticker homónimo']
+        candidate=buy_candidate(val,signal,fresh)
+        # Score Oportunidad alto no equivale a COMPRA: sigue en vigilancia.
+        if candidate["eligible"] and signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR"):
+            signal,tone="VIGILAR COMPRA · SCORE","watch"
+            why=why+[f"Score Oportunidad {val['rank_score']:.1f}: candidatura desde 62/100. No ejecutar sin confirmar gatillo, riesgo y macro."]
+        elif signal.startswith("VIGILAR"):
+            tone="watch"
         assets.append({
             'risk_plan_paper':risk_policy(macro,vixvalue),
+            'candidate':candidate,
             'ticker':item['cedear'], 'usa':us or None, 'sector':item['sector'],
             'cedear_verificado':False, # Catálogo curado NO sustituye PDF oficial BYMA
             'estado_instrumento':'PENDIENTE VALIDAR RATIO Y LISTADO BYMA',
@@ -361,7 +374,14 @@ def main():
             if candidate!=signal:
                 signal,tone=candidate,candidate_tone
                 if note:why=why+[note]
-        sectors.append({'sector':sector,'proxy':proxy,'signal':signal,'tone':tone,'reasons':why,'data':val})
+        candidate=buy_candidate(val,signal,fresh)
+        if candidate["eligible"] and signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR"):
+            signal,tone="VIGILAR COMPRA · SCORE","watch"
+            why=why+[f"Score Oportunidad {val['rank_score']:.1f}: candidato para revisar; falta setup confirmado."]
+        elif signal.startswith("VIGILAR"):
+            tone="watch"
+        sectors.append({'sector':sector,'proxy':proxy,'signal':signal,'tone':tone,
+                        'candidate':candidate,'reasons':why,'data':val})
     logging.info("Régimen %s; VIX=%s; COMPRA CON PRECAUCIÓN: %d activos / %d sectores; VIGILAR COMPRA · MACRO: %d activos",
                  macro,vixvalue,
                  sum(a['signal']=="COMPRA CON PRECAUCIÓN" for a in assets),
@@ -371,14 +391,14 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.5-macro-riesgo-no-veto-acciones-etfs',
+          'rules_version':'1.6-score-espectro-candidatas-62-prioridad-75',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
           'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
                                  for label in sorted({a['signal'] for a in assets})},
           'sector_signal_counts':{label:sum(a['signal']==label for a in sectors)
                                   for label in sorted({a['signal'] for a in sectors})},
-          'note':'La baja de SPY/QQQ bajo SMA50 deja de vetar todas las compras: acciones y ETFs con SMA21/semanal, RS y volumen confirmados pueden ser COMPRA CON PRECAUCIÓN. Paper usa USD120/70% reserva/6% stop; favorable USD250/50%/8%. Ranking RSI/SMA200 penalizado. No existe ventaja OOS demostrada; no orden real ni ratio BYMA validado.'},
+          'note':'Score Oportunidad nuevo y continuo es informativo (SMA21/RSI/MACD/OBV). Vigilar desde 62/100; prioridad 75. La habilitación real sigue temporalmente con score antiguo rank_score_signal para no recalibrar compras sin backtest OOS. Dos verdes para comprar normal/prudente; track record simulado sin reiniciar. BYMA sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
         'assets':assets,'sectors':sectors,'top5':selection,'risk_policy_paper':risk_policy(macro,vixvalue)

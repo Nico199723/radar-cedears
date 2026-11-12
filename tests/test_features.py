@@ -66,7 +66,7 @@ class FeatureTests(unittest.TestCase):
         self.assertGreaterEqual(volume_profile(f)["volume_score"],0)
         ranked={"score":80,"volume_confirm_score":90,"sma21_component":80,
                 "rs_score":75,"rs_verified":True}
-        self.assertEqual(ranking_score(ranked),round(.35*80+.15*80+.30*75+.20*90))
+        self.assertAlmostEqual(ranking_score(ranked),.35*80+.15*80+.30*75+.20*90,places=1)
         self.assertIsNone(ranking_score({"score":80,"volume_confirm_score":None,"sma21_component":80}))
 
     def _sample(self):

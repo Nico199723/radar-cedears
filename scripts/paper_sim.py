@@ -207,7 +207,7 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     if not all(x is not None and x>0 for x in (p,ma21,ma200)):
         return False,""
     if not(p>ma21 and p>ma200):return False,""
-    score,rank=d.get("score",0),d.get("rank_score",0)
+    score,rank=d.get("score",0),d.get("rank_score_signal",d.get("rank_score",0))
     rsi,macd=d.get("rsi14d"),d.get("macd_hist_d")
     if score<65 or rank is None or rank<65 or rsi is None or not(46<=rsi<70) or macd is None or macd<=0:
         return False,""

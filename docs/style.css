@@ -64,3 +64,13 @@
 #pageSimulador td{font-size:11px}
 @media(max-width:980px){.paper-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.paper-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-stat{padding:12px}.paper-stat span{font-size:9px}}
+
+/* Semáforo inequívoco: compra normal verde firme, compra cauta verde suave.
+   Vigilancia no se confunde con una orden. Contrastes para fondo oscuro. */
+.pill.up{background:#126746!important;border-color:#47e2a7!important;color:#effff7!important;box-shadow:inset 3px 0 #80ffbc}
+.pill.caution{background:#234d35!important;border-color:#6fc38b!important;color:#c7f4cf!important;box-shadow:inset 3px 0 #aadcb5}
+.pill.watch{background:#1c3a44;border-color:#426d75;color:#aad9db}
+.top5-pills .pill{font-size:9px;padding:4px 7px;white-space:normal;text-align:left}
+.top5-card:has(.pill.up){border-color:#27794f}
+.top5-card:has(.pill.caution){border-color:#4c855f}
+#buyCaption{line-height:1.35}

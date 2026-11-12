@@ -71,15 +71,19 @@ def volume_profile(frame: pd.DataFrame) -> dict:
     ma20 = float(c.tail(20).mean())
     extension = (float(c.iloc[-1])-ma20)/atr if atr>0 else None
     volume_score = cap(5 + cap((rvol - 1) * 5, -3, 3) + (2 if obv_up else -2), 0, 10) if rvol is not None else None
-    # Volumen atípico sólo es alcista si confirma precio y OBV.
-    price_up=bool(c.iloc[-1]>=c.iloc[-2])
+    # Confirmación como espectro: magnitud de pendiente OBV, precio y RVOL.
+    # Un cierre 0,01% en rojo no debe restar de golpe 30 puntos de volumen.
+    obv_delta=(float(obv.iloc[-1])-float(obv.iloc[-11]))/(max(base,1.)*10)
+    obv_slope=math.tanh(obv_delta/.35)
+    price_impulse=(float(c.iloc[-1])-float(c.iloc[-2]))/max(atr,.001)
+    price_slope=math.tanh(price_impulse/.9)
     if rvol is None:
         volume_confirm=None
     else:
-        impact=cap((rvol-.8)*30,0,35)
-        volume_confirm=cap(45+(15 if obv_up else -15)
-                           +(impact if price_up and obv_up else -impact)
-                           +(5 if price_up else -8),0,100)
+        atypical=math.tanh((rvol-1)/.8)
+        confirmation=.65*obv_slope+.35*price_slope
+        volume_confirm=cap(50+17*obv_slope+12*price_slope
+                           +20*atypical*confirmation,0,100)
     return {
         "rvol20": round(rvol, 2) if rvol is not None else None,
         "dollar_volume20": round(dv, 0),
@@ -88,6 +92,7 @@ def volume_profile(frame: pd.DataFrame) -> dict:
         "stretch_atr20": round(extension, 2) if extension is not None else None,
         "volume_score": round(volume_score, 2) if volume_score is not None else None,
         "volume_confirm_score": round(volume_confirm,2) if volume_confirm is not None else None,
+        "obv_impulse10":round(obv_delta,3),"price_impulse_atr":round(price_impulse,3),
     }
 
 
@@ -122,40 +127,27 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
             if not np.isfinite(m) or p<=m:break
             age+=1
     slope3=(ma21/float(ma.iloc[-4])-1)*100
-    # Primera vela sobre SMA21 tiene prima; después se agota por maduración.
-    # No equivale a comprar cualquier cruce: la distancia en ATR evita perseguir.
-    if down:
-        base,state=7,"CRUCE BAJISTA"
-    elif not above:
-        base,state=22,"BAJO SMA21"
-    elif age==1:
-        base,state=94,"CRUCE ALCISTA"
-    elif age<=3:
-        base,state=88,"CRUCE RECIENTE · "+str(age)+" RUEDAS"
-    elif age<=6:
-        base,state=79,"SOBRE SMA21 · "+str(age)+" RUEDAS"
-    elif age<=9:
-        base,state=70,"SOBRE SMA21 · "+str(age)+" RUEDAS"
-    elif age<=14:
-        base,state=58,"TENDENCIA MADURA · "+str(age)+" RUEDAS"
-    else:
-        base,state=46,"TENDENCIA EXTENDIDA · "+str(age)+" RUEDAS"
-    # La inclinación de la SMA cuenta, sin bonus automático por sobrecompra.
-    if slope3>=.45:
-        base+=7
-    elif slope3>0:
-        base+=3
-    elif slope3<-.45:
-        base-=11
-    elif slope3<0:
-        base-=6
-    # Un cruce muy estirado no tiene ventaja simplemente por ser reciente.
+    # Espectro continuo: distancia normalizada por ATR, edad y pendiente.
+    # Sin escalones de 94 a 88 o de 79 a 70 por una sola rueda.
     distance_atr=None
-    if atr is not None and math.isfinite(float(atr)) and float(atr)>0:
-        distance_atr=(price-ma21)/float(atr)
-        if distance_atr>2.0:base-=20
-        elif distance_atr>1.4:base-=11
-        elif up and distance_atr>=.2:base+=4
+    effective_atr=(float(atr) if atr is not None and math.isfinite(float(atr))
+                   and float(atr)>0 else max(.01,price*.02))
+    distance_atr=(price-ma21)/effective_atr
+    recency=math.exp(-max(0,age-1)/7.0) if above else 0.
+    # En el cruce: transición suave y control de distancia. 1.5 ATR es fuerte.
+    location=50+40*math.tanh(distance_atr/.55)
+    age_drag=27*(1-math.exp(-max(0,age-1)/7.5)) if above else 0.
+    fresh_bonus=8*recency*cap(distance_atr/.6,0,1)
+    slope_effect=8*math.tanh(slope3/.5)
+    extension_cost=20*(1-math.exp(-max(0.,distance_atr-1.15)/.65))
+    base=location-age_drag+fresh_bonus+slope_effect-extension_cost
+    if up:state="CRUCE ALCISTA · 1 RUEDA"
+    elif down:state="CRUCE BAJISTA"
+    elif not above:state="BAJO SMA21"
+    elif age<=3:state=f"CRUCE RECIENTE · {age} RUEDAS"
+    elif age<=9:state=f"SOBRE SMA21 · {age} RUEDAS"
+    elif age<=14:state=f"TENDENCIA MADURA · {age} RUEDAS"
+    else:state=f"TENDENCIA EXTENDIDA · {age} RUEDAS"
     # Vigilar cambios de pendiente *antes* de un cruce bajista formal.
     penalty,reasons=0,[]
     delta1=delta3=macd1=macd3=None
@@ -165,7 +157,7 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
             delta1=float(r.iloc[-1]-r.iloc[-2])
             delta3=float(r.iloc[-1]-r.iloc[-4])
             # Caída leve ya resta; una caída pronunciada de 3 ruedas resta más.
-            loss=min(12,(2 if delta1<0 else 0)+min(10,round(max(0,-delta3)*1.2)))
+            loss=min(12.,2.2*max(0.,-delta1)+.95*max(0.,-delta3))
             if loss:
                 penalty+=loss
                 reasons.append(f"RSI diario pierde pendiente (1r {delta1:+.1f}, 3r {delta3:+.1f}): -{loss}")
@@ -174,10 +166,11 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
         if all(math.isfinite(float(x)) for x in (m.iloc[-1],m.iloc[-2],m.iloc[-4])):
             macd1=float((m.iloc[-1]-m.iloc[-2])/price*100)
             macd3=float((m.iloc[-1]-m.iloc[-4])/price*100)
-            loss=min(12,(2 if macd1<0 else 0)+min(10,round(max(0,-macd3)*70)))
+            loss=min(12.,28*max(0.,-macd1)+44*max(0.,-macd3))
             if loss:
                 penalty+=loss
                 reasons.append(f"Histograma MACD pierde pendiente (1r {macd1:+.3f}%, 3r {macd3:+.3f}%): -{loss}")
+    penalty=round(penalty,2)
     return {"ma21":round(ma21,3),"ma21_prev":round(previous_ma21,3),
             "cross_up21":up,"cross_down21":down,"sma21_state":state,
             "sma21_component":round(cap(base,0,100),2),
@@ -192,39 +185,113 @@ def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
 
 
 
-def score_penalties(row: dict) -> tuple[int,list[str]]:
-    """Deducciones transparentes por extremos de RSI y ruptura SMA200."""
-    penalty=int(row.get("indicator_slope_penalty") or 0)
+def score_penalties(row: dict) -> tuple[float,list[str]]:
+    """Descuentos graduales sin saltos por RSI 69.9/70 ni SMA200 0.01%.
+
+    RSI14 diario: curva continua, con castigo de 30 puntos en 80.
+    SMA200: castigo creciente según distancia porcentual bajo media.
+    Pérdida de pendiente RSI/MACD resta antes del cruce, proporcional al giro.
+    """
+    penalty=float(row.get("indicator_slope_penalty") or 0)
     reasons=list(row.get("indicator_slope_reasons") or [])
     daily=row.get("rsi14d")
-    if daily is not None:
-        if daily>=80: x=30
-        elif daily>=75: x=22
-        elif daily>=70: x=12
-        elif daily>=67: x=5
-        elif daily<=25: x=24
-        elif daily<=30: x=17
-        elif daily<=35: x=10
-        elif daily<=40: x=5
-        else:x=0
-        if x:
+    if daily is not None and math.isfinite(float(daily)):
+        points=[(0,28),(25,24),(30,17),(35,10),(40,5),(44,0),
+                (64,0),(67,4),(70,12),(75,22),(80,30),(90,37),(100,42)]
+        x=float(np.interp(float(daily),[p[0] for p in points],[p[1] for p in points]))
+        if x>=.05:
             penalty+=x
-            reasons.append(f"RSI14 diario {daily:.1f}: -{x}")
+            reasons.append(f"RSI14 diario {float(daily):.1f}: -{x:.1f}")
     weekly=row.get("rsi21w")
-    if weekly is not None and (weekly>=75 or weekly<=30):
-        penalty+=8
-        reasons.append("RSI21 semanal extremo: -8")
+    if weekly is not None and math.isfinite(float(weekly)):
+        w=cap((float(weekly)-65)*.8,0,10)+cap((35-float(weekly))*.8,0,10)
+        if w>=.05:
+            penalty+=w
+            reasons.append(f"RSI21 semanal en extremo: -{w:.1f}")
     monthly=row.get("rsi21m")
-    if monthly is not None and (monthly>=75 or monthly<=25):
-        penalty+=8
-        reasons.append("RSI21 mensual extremo: -8")
+    if monthly is not None and math.isfinite(float(monthly)):
+        m=cap((float(monthly)-68)*.8,0,10)+cap((32-float(monthly))*.8,0,10)
+        if m>=.05:
+            penalty+=m
+            reasons.append(f"RSI21 mensual en extremo: -{m:.1f}")
     price,ma200=row.get("price"),row.get("ma200")
-    if price is not None and ma200 is not None and ma200>0 and price<ma200:
-        below=(1-price/ma200)*100
-        x=min(30,20+int(below//2))
+    if price is not None and ma200 is not None and float(ma200)>0 and float(price)<float(ma200):
+        below=(1-float(price)/float(ma200))*100
+        x=26*(1-math.exp(-below/3.6))
         penalty+=x
-        reasons.append(f"Bajo SMA200 ({below:.1f}%): -{x}")
-    return penalty,reasons
+        reasons.append(f"Bajo SMA200 ({below:.1f}%): -{x:.1f}")
+    return round(penalty,2),reasons
+
+
+def legacy_entry_rank(close: pd.Series, rsi_values: pd.Series,
+                      macd_values: pd.Series, row: dict, is_stock: bool) -> tuple[int|None,int]:
+    """Congelar la escala de decisión pre-v1.6 hasta tener backtest OOS.
+
+    El Score Oportunidad puede volverse más suave para ranking/vigilancia,
+    pero las compras prudentes no deben cambiar ocultamente por eso.
+    """
+    if any(row.get(k) is None for k in ("score","volume_score","rvol20","sma21_age",
+                                        "sma21_slope_pct3","ma21","price")):
+        return None,0
+    price=float(row["price"])
+    age=int(row["sma21_age"])
+    slope=float(row["sma21_slope_pct3"])
+    dist=row.get("sma21_distance_atr")
+    if row.get("cross_down21"):sma=7
+    elif price<=row["ma21"]:sma=22
+    elif age==1:sma=94
+    elif age<=3:sma=88
+    elif age<=6:sma=79
+    elif age<=9:sma=70
+    elif age<=14:sma=58
+    else:sma=46
+    sma+=7 if slope>=.45 else 3 if slope>0 else -11 if slope<-.45 else -6 if slope<0 else 0
+    if dist is not None:
+        if dist>2:sma-=20
+        elif dist>1.4:sma-=11
+        elif row.get("cross_up21") and dist>=.2:sma+=4
+    sma=cap(sma,0,100)
+    rvol=float(row["rvol20"])
+    obv_up=row.get("obv_up10") is True
+    up=bool(float(close.iloc[-1])>=float(close.iloc[-2]))
+    impact=cap((rvol-.8)*30,0,35)
+    vol=cap(45+(15 if obv_up else -15)
+            +(impact if up and obv_up else -impact)+(5 if up else -8),0,100)
+    loss=0
+    if len(rsi_values)>=4:
+        r=rsi_values.astype(float)
+        d1=float(r.iloc[-1]-r.iloc[-2]);d3=float(r.iloc[-1]-r.iloc[-4])
+        if math.isfinite(d1) and math.isfinite(d3):
+            loss+=min(12,(2 if d1<0 else 0)+min(10,round(max(0,-d3)*1.2)))
+    if len(macd_values)>=4:
+        m=macd_values.astype(float)
+        d1=float((m.iloc[-1]-m.iloc[-2])/price*100)
+        d3=float((m.iloc[-1]-m.iloc[-4])/price*100)
+        if math.isfinite(d1) and math.isfinite(d3):
+            loss+=min(12,(2 if d1<0 else 0)+min(10,round(max(0,-d3)*70)))
+    daily=row.get("rsi14d")
+    if daily is not None:
+        if daily>=80:loss+=30
+        elif daily>=75:loss+=22
+        elif daily>=70:loss+=12
+        elif daily>=67:loss+=5
+        elif daily<=25:loss+=24
+        elif daily<=30:loss+=17
+        elif daily<=35:loss+=10
+        elif daily<=40:loss+=5
+    weekly=row.get("rsi21w")
+    monthly=row.get("rsi21m")
+    if weekly is not None and (weekly>=75 or weekly<=30):loss+=8
+    if monthly is not None and (monthly>=75 or monthly<=25):loss+=8
+    ma200=row.get("ma200")
+    if ma200 and price<ma200:
+        loss+=min(30,20+int(((1-price/ma200)*100)//2))
+    rs=row.get("rs_score")
+    verified=bool(row.get("rs_verified")) and rs is not None
+    wb,wm=(.30,.20) if is_stock else (.35,.15)
+    gross=wb*float(row["score"])+wm*sma+.30*(float(rs) if verified else 50.)+.20*vol
+    if not verified:loss+=12
+    return round(cap(gross-loss,0,100)),int(loss)
 
 
 def opportunity_score(row: dict, is_stock: bool=True) -> int | None:
@@ -254,7 +321,12 @@ def opportunity_score(row: dict, is_stock: bool=True) -> int | None:
         "volume":round(.20*volume,2),
         "penalty":-penalty,
     }
-    return round(cap(pre-penalty,0,100))
+    final=round(cap(pre-penalty,0,100),1)
+    row["rank_raw"]=round(pre,2)
+    row["rank_level"]=("PRIORIDAD PARA ESTUDIAR" if final>=78 else
+                       "CANDIDATA PARA VIGILAR" if final>=62 else
+                       "FUERA DE RANGO DE COMPRA")
+    return final
 
 
 def ranking_stock_21(row: dict) -> int | None:
@@ -315,7 +387,8 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
     if not (p>ma21 and p>ma50 and p>ma200):
         return base_signal,"neutral",None
 
-    score,rank,rsi,weekly=(val(k) for k in ("score","rank_score","rsi14d","rsi21w"))
+    score,rsi,weekly=(val(k) for k in ("score","rsi14d","rsi21w"))
+    rank=val("rank_score_signal") if row.get("rank_score_signal") is not None else val("rank_score")
     macd,macd_w=(val(k) for k in ("macd_hist_d","macd_hist_w"))
     rvol,dollar,stretch=(val(k) for k in ("rvol20","dollar_volume20","stretch_atr20"))
     rs_spy,rs_qqq,rs_score=(val(k) for k in ("rs_spy20","rs_qqq20","rs_score"))
@@ -327,7 +400,7 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
 
     structure=(score>=67 and rank>=58 and 43<=rsi<70
                and weekly>=45 and macd>0 and macd_w>=0
-               and row.get("rank_penalty",0)<24)
+               and row.get("rank_penalty_signal",row.get("rank_penalty",0))<24)
     leadership=(row.get("rs_verified") is True and rs_score>=43
                 and (rs_spy+rs_qqq)/2>=-3.5)
     liquidity=(dollar>=5_000_000 and rvol>=.75
@@ -355,11 +428,54 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
             "No bloquea SPY/QQQ: falta cruce SMA21, pullback, ruptura o "
             "continuación próxima a la media sin perseguir precio")
 
-    return "COMPRA CON PRECAUCIÓN", "wait", (
+    return "COMPRA CON PRECAUCIÓN", "caution", (
         "Setup individual confirmado con SPY/QQQ débiles. Plan SIMULADO: "
         "hasta USD 120 por posición, 70% de reserva y stop de referencia 6%; "
         "compras 40/35/25. Los gaps pueden provocar pérdidas mayores.")
 
+
+
+MIN_OPTION_SCORE=62.0
+PRIORITY_OPTION_SCORE=75.0
+
+
+def buy_candidate(row: dict | None, signal: str, fresh: bool) -> dict:
+    """Semáforo de ESTUDIO, distinto de señal operable.
+
+    Un score alto no da una orden. La ausencia de entrada indica exactamente
+    cuál confirmación falta. No modifica los stops ni el paper track record.
+    """
+    out={"eligible":False,"min_score":MIN_OPTION_SCORE,
+         "priority_score":PRIORITY_OPTION_SCORE,"level":"SIN CANDIDATURA",
+         "blockers":[]}
+    if not fresh or not row or signal.startswith(("SALIR","REDUCIR","SIN","DATOS")):
+        out["blockers"]=["Datos sin vigencia o salida activa"];return out
+    rank=row.get("rank_score")
+    if rank is None:
+        out["blockers"]=["Score Oportunidad sin calcular"];return out
+    if rank<MIN_OPTION_SCORE:
+        out["blockers"]=[f"Score {rank:.1f} por debajo del mínimo {MIN_OPTION_SCORE:.0f}"];return out
+    p,ma21,ma200=(row.get(k) for k in ("price","ma21","ma200"))
+    rsi=row.get("rsi14d")
+    macd=row.get("macd_hist_d")
+    blockers=[]
+    if not row.get("rs_verified"):blockers.append("RS frente a SPY/QQQ no verificada")
+    if p is None or ma200 is None or p<=ma200:blockers.append("Precio bajo SMA200")
+    if p is None or ma21 is None or p<=ma21:blockers.append("Aún bajo SMA21 diaria")
+    if rsi is None or not 35<rsi<75:blockers.append("RSI en extremo de riesgo")
+    if macd is None or macd<=0:blockers.append("MACD diario sin impulso positivo")
+    if row.get("dollar_volume20") is None or row["dollar_volume20"]<5_000_000:
+        blockers.append("Volumen USD promedio insuficiente")
+    out["blockers"]=blockers
+    out["eligible"]=not blockers
+    if not blockers:
+        out["level"]=("PRIORIDAD DE COMPRA · A CONFIRMAR" if rank>=PRIORITY_OPTION_SCORE
+                      else "CANDIDATA · A CONFIRMAR")
+        if not (row.get("near20") or row.get("breakout") or row.get("cross_up21")):
+            out["blockers"]=["Score favorable; falta gatillo o continuación validada"]
+    else:
+        out["level"]="SCORE ALTO · ESTRUCTURA POR CONFIRMAR"
+    return out
 
 
 def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) -> list[dict]:
@@ -372,9 +488,9 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
             continue
         rank=d.get("rank_score")
         dollar=d.get("dollar_volume20")
-        if rank is None or rank<58 or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
+        if rank is None or rank<MIN_OPTION_SCORE or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
             continue
-        if d.get("score",0)<65 or d.get("price",0)<=d.get("ma200",float("inf")):
+        if d.get("price",0)<=d.get("ma200",float("inf")):
             continue
         if d.get("rsi14d") is None or not(35<d["rsi14d"]<75):
             continue
@@ -385,13 +501,13 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         relative=d.get("rs_spy20")
         # Regla de desempate declarada. Divergencia vs SPY en 20 ruedas, no
         # una estimación de alpha futura.
-        priority = rank + (7 if d.get("cross_up21") else 0) + (5 if d.get("near20") else 0) + (6 if d.get("breakout") else 0)
+        priority = rank + 3.0*(d.get("sma21_component") or 0)/100 + 2.5*min(1.,max(0.,(d.get("rvol20") or 0)-.6))
         priority += cap((relative or 0)/3, -4, 4)
         priority += cap((d.get("rs_qqq20") or 0)/3, -4, 4)
-        if d.get("stretch_atr20") is not None and d["stretch_atr20"]>2:
-            priority -= 6
+        if d.get("stretch_atr20") is not None:
+            priority -= 8*(1-math.exp(-max(0.,d["stretch_atr20"]-1.2)))
         if d.get("rvol20") is not None and d["rvol20"]<0.65:
-            priority -= 3
+            priority -= 3*(1-d["rvol20"]/.65)
         candidates.append((priority,a,relative))
     candidates.sort(key=lambda v:(v[0],v[1]["data"]["rank_score"]),reverse=True)
     selection=[]
@@ -405,6 +521,8 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         e=a.get("earnings") or {}
         event_days=e.get("days_until")
         tag="CRUCE ALCISTA SMA21 · CONFIRMAR" if d.get("cross_up21") else ("GATILLO DE ENTRADA" if (d.get("breakout") or d.get("near20")) else "ESPERAR GATILLO")
+        if a.get("signal") in ("VIGILAR COMPRA · SCORE","VIGILAR COMPRA · MACRO"):
+            tag="SCORE PARA ESTUDIAR · FALTA CONFIRMACIÓN"
         if market!="FAVORABLE":
             tag += " · RIESGO MACRO"
         if event_days is not None and 0<=event_days<=7:
@@ -412,6 +530,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         selection.append({
             "ticker":a["ticker"], "usa":a["usa"],"sector":sector,
             "rank_score":d["rank_score"],"score":d["score"],
+            "candidate":a.get("candidate"),"rank_level":d.get("rank_level"),
             "price":d["price"],"ma20":d["ma20"],"invalid_usd":d.get("invalid_usd"),
             "target_2r":d.get("target_2r"),
             "relative_spy20":relative,"relative_qqq20":d.get("rs_qqq20"),
