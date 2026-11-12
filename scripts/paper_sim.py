@@ -24,6 +24,23 @@ FEE_BPS=5
 SLIP_BPS=10
 TRANCHES=(.40,.35,.25)
 MAX_SESSION_HOLD=25
+PRUDENT_BUDGET=120.0
+PRUDENT_RESERVE=1400.0
+PRUDENT_STOP_PCT=.06
+PRUDENT_SLOTS=2
+PRUDENT_SECTOR_SLOTS=1
+
+
+def allocation_for(macro:str)->dict:
+    if macro in ('DEFENSIVO','MIXTO'):
+        return {'risk_mode':'PRUDENTE','budget':PRUDENT_BUDGET,'reserve':PRUDENT_RESERVE,
+                'stop_pct':PRUDENT_STOP_PCT,'max_slots':PRUDENT_SLOTS,
+                'max_sector_slots':PRUDENT_SECTOR_SLOTS}
+    if macro=='FAVORABLE':
+        return {'risk_mode':'NORMAL','budget':MAX_POSITION,'reserve':RESERVE,
+                'stop_pct':STOP_PCT,'max_slots':MAX_SLOTS,
+                'max_sector_slots':MAX_SECTOR_SLOTS}
+    raise ValueError('Macro sin verificar: nuevas compras bloqueadas')
 
 
 def new_ledger(last_session: str, generated_at: str) -> dict:
@@ -71,7 +88,7 @@ def add_fill(s:dict, day:str, usa:str, price:float, qty:float, action:str,
 def mark_stop(p:dict, close:float) -> None:
     """Trailing anclado SOLO al cierre conocido, vigente desde próxima rueda."""
     p["peak_close"]=max(float(p.get("peak_close",0)),close)
-    p["stop_usd"]=number(max(p["stop_usd"],p["peak_close"]*(1-STOP_PCT)),4)
+    p["stop_usd"]=number(max(p["stop_usd"],p["peak_close"]*(1-p.get("stop_pct",STOP_PCT))),4)
 
 
 def close_position(s:dict, usa:str, day:str, price:float, reason:str) -> None:
@@ -104,20 +121,23 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
     p=s["positions"].get(usa)
     stage=int(order["tranche"])
     if p is None:
-        if stage!=1 or len(s["positions"])>=MAX_SLOTS:
+        if stage!=1 or len(s["positions"])>=int(order.get("max_slots",MAX_SLOTS)):
             return False
         sector_count=sum(1 for x in s["positions"].values() if x["sector"]==order["sector"])
-        if sector_count>=MAX_SECTOR_SLOTS:return False
+        if sector_count>=int(order.get("max_sector_slots",MAX_SECTOR_SLOTS)):return False
         p={"usa":usa,"ticker":order["ticker"],"sector":order["sector"],
            "entry_date":day,"signal_day":order["issued_day"],
-           "budget":min(MAX_POSITION,.125*INITIAL),
+           "budget":min(float(order.get("budget",MAX_POSITION)),MAX_POSITION),
+           "risk_mode":order.get("risk_mode","NORMAL"),
+           "reserve_usd":float(order.get("reserve_usd",RESERVE)),
+           "stop_pct":float(order.get("stop_pct",STOP_PCT)),
            "shares":0.0,"spent":0.0,"tranche_count":0,"last_fill_day":"",
            "stop_usd":0.0,"peak_close":0.0,"sessions_held":0}
     if stage!=p["tranche_count"]+1 or day==p["last_fill_day"]:
         return False
     # Retiene USD 1000 siempre, con USD 20 máximo de pérdida teórica al stop.
     remaining=min(p["budget"]*TRANCHES[stage-1],
-                  max(0,s["cash"]-RESERVE))
+                  max(0,s["cash"]-max(p["reserve_usd"],float(order.get("reserve_usd",p["reserve_usd"])))))
     if remaining<10:return False
     effective=open_price*(1+SLIP_BPS/10000)
     qty=remaining/(effective*(1+FEE_BPS/10000))
@@ -127,7 +147,7 @@ def open_tranche(s:dict, order:dict, day:str, open_price:float) -> bool:
     p["spent"]+=cost
     p["tranche_count"]=stage
     p["last_fill_day"]=day
-    p["stop_usd"]=number(max(p["stop_usd"],(p["spent"]/p["shares"])*(1-STOP_PCT)),4)
+    p["stop_usd"]=number(max(p["stop_usd"],(p["spent"]/p["shares"])*(1-p["stop_pct"])),4)
     s["cash"]-=cost
     s["positions"][usa]=p
     add_fill(s,day,usa,effective,qty,f"COMPRA {stage}/3",order.get("reason","SMA21"),cost)
@@ -272,7 +292,7 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
                 reason="VENTA POR SEÑAL TÉCNICA"
             elif down2 and (d.get("macd_hist_d") or 0)<0:
                 reason="VENTA: DOS CIERRES BAJO SMA21 Y MACD NEGATIVO"
-            elif d["price"]>=avg*1.16:
+            elif d["price"]>=avg*(1+2*p.get("stop_pct",STOP_PCT)):
                 reason="VENTA: OBJETIVO +16% APROX. (2R)"
             elif p["sessions_held"]>=MAX_SESSION_HOLD and d["price"]<avg*1.03:
                 reason="VENTA POR TIEMPO: 25 RUEDAS SIN AVANCE"
@@ -287,7 +307,8 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
                         stage==3 and d["price"]>avg*1.02 and d.get("obv_up10") is True)):
                     s["orders"].append({"side":"BUY","usa":usa,"ticker":p["ticker"],
                                         "sector":p["sector"],"tranche":stage,"issued_day":latest_day,
-                                        "reason":"AGREGAR TRAMO TRAS CONFIRMACIÓN SMA21"})
+                                        "reason":"AGREGAR TRAMO TRAS CONFIRMACIÓN SMA21",
+                                        "reserve_usd":max(p["reserve_usd"],allocation_for(macro)["reserve"]) if macro!="NO VERIFICADO" else p["reserve_usd"]})
         # Nuevas entradas: máximo 4 posiciones, concentración sectorial <=2.
         candidates=[]
         for a in assets:
@@ -297,20 +318,24 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
             if allowed:
                 candidates.append((d.get("rank_score",0),d.get("cross_up21",False),a,reason))
         candidates.sort(key=lambda x:(x[1],x[0]),reverse=True)
+        policy=allocation_for(macro) if macro!="NO VERIFICADO" else None
         open_syms=set(s["positions"])|{o["usa"] for o in s["orders"]}
         sector_slots={}
         for p in s["positions"].values():
             sector_slots[p["sector"]]=sector_slots.get(p["sector"],0)+1
         for _,_,a,reason in candidates:
             usa=a["usa"]
-            if usa in open_syms or len(open_syms)>=MAX_SLOTS:
+            if policy is None or usa in open_syms or len(open_syms)>=policy["max_slots"] or s["cash"]<=policy["reserve"]+policy["budget"]*TRANCHES[0]:
                 continue
             sector=a["sector"]
-            if sector_slots.get(sector,0)>=MAX_SECTOR_SLOTS:continue
-            if s["cash"]<=RESERVE+100:break
+            if sector_slots.get(sector,0)>=policy["max_sector_slots"]:continue
+            if s["cash"]<=policy["reserve"]+10:break
             s["orders"].append({"side":"BUY","usa":usa,"ticker":a["ticker"],
                                 "sector":sector,"tranche":1,"issued_day":latest_day,
-                                "reason":reason})
+                                "budget":policy["budget"],"reserve_usd":policy["reserve"],
+                                "stop_pct":policy["stop_pct"],"max_slots":policy["max_slots"],
+                                "max_sector_slots":policy["max_sector_slots"],
+                                "risk_mode":policy["risk_mode"],"reason":reason})
             open_syms.add(usa)
             sector_slots[sector]=sector_slots.get(sector,0)+1
         s["last_signal_session"]=latest_day
@@ -335,7 +360,9 @@ def public_summary(s:dict,frames:dict[str,pd.DataFrame])->dict:
                                "last_price_usd":number(px,4) if px is not None else None,
                                "stop_usd":p["stop_usd"],"market_value_usd":number(px*p["shares"],2) if px is not None else None,
                                "unrealized_usd":number(unreal,2) if unreal is not None else None,
-                               "sessions_held":p["sessions_held"]})
+                               "sessions_held":p["sessions_held"],
+                               "risk_mode":p.get("risk_mode","NORMAL"),
+                               "stop_pct":round(100*p.get("stop_pct",STOP_PCT),1)})
     return {
         "version":VERSION,"is_simulated":True,"start":s["created_at"],
         "last_closed_session":s["last_session"],"initial_capital_usd":INITIAL,
@@ -347,11 +374,15 @@ def public_summary(s:dict,frames:dict[str,pd.DataFrame])->dict:
         "open_positions":open_positions,"pending_orders":s["orders"],
         "closed_trades":closed[-100:],"fills":s["fills"][-200:],
         "equity_history":s["equity_history"][-150:],"unpriced_symbols":missing,
-        "assumptions":{"stop_pct":8,"fee_bps_each_side":FEE_BPS,
+        "assumptions":{"stop_pct":8,"prudent_stop_pct":6,
+             "prudent_max_position_usd":PRUDENT_BUDGET,
+             "prudent_reserve_usd":PRUDENT_RESERVE,
+             "prudent_max_positions":PRUDENT_SLOTS,
+             "fee_bps_each_side":FEE_BPS,
              "slippage_bps_each_side":SLIP_BPS,"reserve_usd":RESERVE,
              "max_position_usd":MAX_POSITION,"max_positions":MAX_SLOTS,
              "entry_tranches":[40,35,25],"time_stop_sessions":MAX_SESSION_HOLD,
-             "entry_rule":"SMA21/candidato técnico experimental, ejecución al OPEN t+1",
+             "entry_rule":"SMA21 confirmado/volumen: macro adverso habilita tamaño y stop reducidos, OPEN t+1",
              "data":"USD subyacente USA, OHLC ajustados Yahoo; NO operaciones reales"},
         "disclaimer":"Simulación informativa, órdenes no reales; cierres y gaps revisables, sin precios/CCL/spread CEDEAR BYMA. Histórico desde creación; no reconstruye trades previos."
     }
