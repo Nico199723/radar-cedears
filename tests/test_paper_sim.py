@@ -12,7 +12,7 @@ import pandas as pd
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts"))
-from paper_sim import new_ledger,process_ledger,public_summary,evaluate_entry,check_ledger,STOP_PCT,INITIAL,VERSION
+from paper_sim import new_ledger,process_ledger,public_summary,evaluate_entry,check_ledger,STOP_PCT,INITIAL,VERSION,allocation_for,PRUDENT_BUDGET,PRUDENT_STOP_PCT
 from paper_store import latest_state,ARTIFACT_NAME
 
 
@@ -37,6 +37,35 @@ class PaperTests(unittest.TestCase):
         self.market=candles([100,101,102,103],[99,100,101,102],[100,101,102,103])
         self.stock=candles([100,101,100,88],[99,100,95,83],[100,101,101,85])
         self.frames={"SPY":self.market,"AAA":self.stock}
+
+    def test_sizing_macro_defensivo_vs_favorable(self):
+        prudent=allocation_for("DEFENSIVO")
+        normal=allocation_for("FAVORABLE")
+        self.assertEqual(prudent["budget"],120)
+        self.assertEqual(prudent["reserve"],1400)
+        self.assertAlmostEqual(prudent["stop_pct"],.06)
+        self.assertEqual(prudent["max_slots"],2)
+        self.assertEqual(prudent["max_sector_slots"],1)
+        self.assertEqual(normal["budget"],250)
+        self.assertEqual(normal["reserve"],1000)
+        self.assertAlmostEqual(normal["stop_pct"],.08)
+        with self.assertRaises(ValueError):
+            allocation_for("NO VERIFICADO")
+
+    def test_defensivo_dos_posiciones_menor_monto_stop_seis(self):
+        s=new_ledger(self.days[0],"2026-11-10T20:00:00Z")
+        assets=[asset(self.days[1],"X"+str(i),sector="Sector "+str(i)) for i in range(4)]
+        frames={"SPY":self.market}
+        for a in assets:frames[a["usa"]]=self.stock
+        process_ledger(s,frames,assets,"DEFENSIVO",18,self.days[1])
+        self.assertEqual(len(s["orders"]),2)
+        self.assertTrue(all(o["risk_mode"]=="PRUDENTE" for o in s["orders"]))
+        process_ledger(s,frames,[],"NO VERIFICADO",None,self.days[2])
+        self.assertEqual(len(s["positions"]),2)
+        self.assertAlmostEqual(INITIAL-s["cash"],96,delta=1)
+        self.assertGreaterEqual(s["cash"],1400)
+        self.assertTrue(all(p["stop_pct"]==.06 for p in s["positions"].values()))
+        self.assertTrue(all(p["budget"]==120 for p in s["positions"].values()))
 
     def test_first_run_does_not_retroactively_buy(self):
         s=new_ledger(self.days[1],"2026-11-11T20:00:00Z")
