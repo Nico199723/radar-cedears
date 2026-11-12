@@ -86,52 +86,52 @@ def ranking_score(row: dict) -> int | None:
 
 def cautious_signal(row: dict | None, market: str, vix: float | None,
                     fresh: bool, base_signal: str) -> tuple[str, str, str | None]:
-    """Candidato muy exigente fuera del régimen FAVORABLE; sin órdenes.
+    """Excepción macro *condicional*; no compra por score ni por mercado solo.
 
-    Respeta las salidas existentes. No genera compras si macro no verificado,
-    VIX alto, o volumen/serie semanal incompletos. Este método es una propuesta:
-    no usar como decisión final hasta comparación histórica IS/OOS.
+    Activar sólo con precio sobre SMA21/SMA50/SMA200, semanal firme, RSI/MACD,
+    volumen y gatillo diario. Un VIX >=25 o macro desconocido sigue bloqueando.
+    La contraprestación por mercado débil es menor size/stop en paper (no cambiar
+    el precio ni ocultar el riesgo de gaps); jamás sustituye backtest OOS.
     """
     if not row or not fresh or market in ("FAVORABLE", "NO VERIFICADO"):
         return base_signal, "neutral", None
-    if base_signal.startswith(("SALIR", "REDUCIR")):
+    if base_signal.startswith(("SALIR", "REDUCIR","DATOS","SIN")):
         return base_signal, "neutral", None
-    p, m20, m50, m200 = (row.get(k) for k in ("price","ma20","ma50","ma200"))
-    if any(x is None for x in (p,m20,m50,m200)):
+    if vix is None or vix >= 25 or vix < 0:
         return base_signal, "neutral", None
-    trend = p > m50 > m200
-    sc = row.get("score", 0)
-    rsi = row.get("rsi14d")
-    weekly = row.get("rsi21w")
-    macd = row.get("macd_hist_d")
-    histw = row.get("macd_hist_w")
-    rvol = row.get("rvol20")
-    usdvol = row.get("dollar_volume20")
-    obv = row.get("obv_up10")
-    stretch = row.get("stretch_atr20")
-    gate = (
-        vix is not None and vix < 25 and trend and sc >= 76
-        and rsi is not None and 46 <= rsi <= 70
-        and weekly is not None and weekly >= 52
-        and macd is not None and macd > 0
-        and histw is not None and histw > 0
-        and rvol is not None and usdvol is not None
-        and usdvol >= 5_000_000 and obv is True
-        and stretch is not None and stretch <= 1.8
+    keys=("price","ma21","ma50","ma200")
+    vals=[row.get(k) for k in keys]
+    if any(x is None or not math.isfinite(float(x)) or float(x)<=0 for x in vals):
+        return base_signal, "neutral", None
+    p,ma21,m50,m200=vals
+    if not (p>ma21 and p>m50>m200):
+        return base_signal, "neutral", None
+    strong=(
+        row.get("score",0)>=70
+        and row.get("rsi14d") is not None and 46<=row["rsi14d"]<=70
+        and row.get("rsi21w") is not None and row["rsi21w"]>=48
+        and row.get("macd_hist_d") is not None and row["macd_hist_d"]>0
+        and row.get("macd_hist_w") is not None and row["macd_hist_w"]>=0
+        and row.get("dollar_volume20") is not None and row["dollar_volume20"]>=5_000_000
+        and row.get("rvol20") is not None and row["rvol20"]>=.85
+        and row.get("obv_up10") is True
+        and row.get("stretch_atr20") is not None and -.75<=row["stretch_atr20"]<=1.8
     )
-    if not gate:
-        if trend and sc >= 73 and macd is not None and macd > 0 and vix is not None and vix < 25:
-            return "VIGILAR COMPRA · MACRO", "wait", "Fortaleza individual, pero falta confirmación de volumen/semanal o el gatillo; sin compra automática"
+    if not strong:
+        if row.get("score",0)>=70 and (row.get("macd_hist_d") or 0)>0:
+            return "VIGILAR COMPRA · MACRO", "wait", (
+                "Fortaleza individual por encima de SMA21/50/200, pero faltan "
+                "confirmaciones para asumir riesgo en mercado adverso")
         return base_signal, "neutral", None
-    pullback = bool(row.get("near20") and rvol >= 0.70)
-    breakout = bool(row.get("breakout") and rvol >= 1.20)
-    if pullback or breakout:
-        return "COMPRA CON PRECAUCIÓN", "wait", (
-            "Mercado mixto/defensivo: señal condicionada a volumen y semanal; "
-            "evaluar sólo primer tramo reducido (20-30% de la posición prevista), "
-            "riesgo 0,5% del capital, invalidación técnica y sin perseguir precio"
-        )
-    return "VIGILAR COMPRA · MACRO", "wait", "Liderazgo relativo y volumen aceptables; esperar pullback o ruptura válida"
+    gate=bool(row.get("cross_up21") or row.get("near20") or row.get("breakout"))
+    if not gate:
+        return "VIGILAR COMPRA · MACRO", "wait", (
+            "Hay fuerza, volumen y estructura semanal, pero falta cruce/retroceso/ruptura de entrada")
+    return "COMPRA CON PRECAUCIÓN", "wait", (
+        "SPY/QQQ débiles NO bloquean la excepción: confirmar gatillo SMA21/volumen "
+        "y operar en 40/35/25 con tope simulado USD 120, reserva >=70%, stop "
+        "de referencia 6% (los gaps pueden superar el stop); sin orden automática")
+
 
 
 def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) -> list[dict]:
