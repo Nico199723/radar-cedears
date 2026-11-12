@@ -2,6 +2,12 @@ name: Actualizar radar CEDEARs
 
 on:
   workflow_dispatch:
+  # Fallback automático: el deploy legacy de Pages puede pisar la web del radar.
+  # Después de ese deploy, reconstruimos y publicamos docs/ otra vez.
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -27,6 +33,7 @@ concurrency:
 
 jobs:
   actualizar-y-publicar:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
