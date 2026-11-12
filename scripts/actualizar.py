@@ -362,6 +362,11 @@ def main():
                 signal,tone=candidate,candidate_tone
                 if note:why=why+[note]
         sectors.append({'sector':sector,'proxy':proxy,'signal':signal,'tone':tone,'reasons':why,'data':val})
+    logging.info("Régimen %s; VIX=%s; COMPRA CON PRECAUCIÓN: %d activos / %d sectores; VIGILAR COMPRA · MACRO: %d activos",
+                 macro,vixvalue,
+                 sum(a['signal']=="COMPRA CON PRECAUCIÓN" for a in assets),
+                 sum(s['signal']=="COMPRA CON PRECAUCIÓN" for s in sectors),
+                 sum(a['signal']=="VIGILAR COMPRA · MACRO" for a in assets))
     result={
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
