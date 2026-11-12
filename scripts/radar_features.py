@@ -91,37 +91,111 @@ def volume_profile(frame: pd.DataFrame) -> dict:
     }
 
 
-def sma21_priority(close: pd.Series) -> dict:
-    """Cruce de cierre contra SMA21: sin mirar la vela futura.
+def sma21_priority(close: pd.Series, rsi_values: pd.Series | None = None,
+                   macd_values: pd.Series | None = None,
+                   atr: float | None = None) -> dict:
+    """Espectro SMA21: cruce reciente > tendencia madura; pierde fuerza al aplanarse.
 
-    Puntaje 0..100 es calidad de la relación con SMA21, NO rendimiento esperado.
-    El cruce tiene más peso que simplemente operar arriba de la media.
+    Usa únicamente cierres hasta t. La edad es el número de cierres consecutivos
+    por encima de la SMA21, no días calendario. RSI/MACD restan al inclinarse,
+    aunque todavía estén en zona positiva: *no* esperan al cruce bajista.
     """
-    if len(close) < 23:
-        return {"ma21": None, "ma21_prev": None, "cross_up21": False,
-                "cross_down21": False, "sma21_state": "SIN HISTÓRICO",
-                "sma21_component": None}
-    c = close.astype(float)
+    no_data={"ma21":None,"ma21_prev":None,"cross_up21":False,
+             "cross_down21":False,"sma21_state":"SIN HISTÓRICO",
+             "sma21_component":None,"sma21_age":None,"sma21_slope_pct3":None,
+             "sma21_distance_atr":None,"rsi_delta1":None,"rsi_delta3":None,
+             "macd_delta1_pct":None,"macd_delta3_pct":None,
+             "indicator_slope_penalty":0,"indicator_slope_reasons":[]}
+    if len(close)<25:return no_data
+    c=close.astype(float)
+    ma=c.rolling(21,min_periods=21).mean()
     price,prev=float(c.iloc[-1]),float(c.iloc[-2])
-    ma21=float(c.iloc[-21:].mean())
-    previous_ma21=float(c.iloc[-22:-1].mean())
-    up=prev<=previous_ma21 and price>ma21
-    down=prev>=previous_ma21 and price<ma21
-    if up:rating,state=100,"CRUCE ALCISTA"
-    elif down:rating,state=0,"CRUCE BAJISTA"
-    elif price>ma21 and ma21>previous_ma21:rating,state=80,"SOBRE SMA21 · SUBIENDO"
-    elif price>ma21:rating,state=65,"SOBRE SMA21"
-    elif ma21>previous_ma21:rating,state=35,"BAJO SMA21 · MEDIA SUBIENDO"
-    else:rating,state=15,"BAJO SMA21"
+    ma21,previous_ma21=float(ma.iloc[-1]),float(ma.iloc[-2])
+    if not all(math.isfinite(x) for x in (price,prev,ma21,previous_ma21)) or ma21<=0:
+        return no_data
+    above=bool(price>ma21)
+    up=bool(prev<=previous_ma21 and above)
+    down=bool(prev>=previous_ma21 and price<ma21)
+    age=0
+    if above:
+        for p,m in zip(reversed(c.to_numpy()),reversed(ma.to_numpy())):
+            if not np.isfinite(m) or p<=m:break
+            age+=1
+    slope3=(ma21/float(ma.iloc[-4])-1)*100
+    # Primera vela sobre SMA21 tiene prima; después se agota por maduración.
+    # No equivale a comprar cualquier cruce: la distancia en ATR evita perseguir.
+    if down:
+        base,state=7,"CRUCE BAJISTA"
+    elif not above:
+        base,state=22,"BAJO SMA21"
+    elif age==1:
+        base,state=94,"CRUCE ALCISTA"
+    elif age<=3:
+        base,state=88,"CRUCE RECIENTE · "+str(age)+" RUEDAS"
+    elif age<=6:
+        base,state=79,"SOBRE SMA21 · "+str(age)+" RUEDAS"
+    elif age<=9:
+        base,state=70,"SOBRE SMA21 · "+str(age)+" RUEDAS"
+    elif age<=14:
+        base,state=58,"TENDENCIA MADURA · "+str(age)+" RUEDAS"
+    else:
+        base,state=46,"TENDENCIA EXTENDIDA · "+str(age)+" RUEDAS"
+    # La inclinación de la SMA cuenta, sin bonus automático por sobrecompra.
+    if slope3>=.45:
+        base+=7
+    elif slope3>0:
+        base+=3
+    elif slope3<-.45:
+        base-=11
+    elif slope3<0:
+        base-=6
+    # Un cruce muy estirado no tiene ventaja simplemente por ser reciente.
+    distance_atr=None
+    if atr is not None and math.isfinite(float(atr)) and float(atr)>0:
+        distance_atr=(price-ma21)/float(atr)
+        if distance_atr>2.0:base-=20
+        elif distance_atr>1.4:base-=11
+        elif up and distance_atr>=.2:base+=4
+    # Vigilar cambios de pendiente *antes* de un cruce bajista formal.
+    penalty,reasons=0,[]
+    delta1=delta3=macd1=macd3=None
+    if rsi_values is not None and len(rsi_values)>=4:
+        r=rsi_values.astype(float)
+        if all(math.isfinite(float(x)) for x in (r.iloc[-1],r.iloc[-2],r.iloc[-4])):
+            delta1=float(r.iloc[-1]-r.iloc[-2])
+            delta3=float(r.iloc[-1]-r.iloc[-4])
+            # Caída leve ya resta; una caída pronunciada de 3 ruedas resta más.
+            loss=min(12,(2 if delta1<0 else 0)+min(10,round(max(0,-delta3)*1.2)))
+            if loss:
+                penalty+=loss
+                reasons.append(f"RSI diario pierde pendiente (1r {delta1:+.1f}, 3r {delta3:+.1f}): -{loss}")
+    if macd_values is not None and len(macd_values)>=4 and price>0:
+        m=macd_values.astype(float)
+        if all(math.isfinite(float(x)) for x in (m.iloc[-1],m.iloc[-2],m.iloc[-4])):
+            macd1=float((m.iloc[-1]-m.iloc[-2])/price*100)
+            macd3=float((m.iloc[-1]-m.iloc[-4])/price*100)
+            loss=min(12,(2 if macd1<0 else 0)+min(10,round(max(0,-macd3)*70)))
+            if loss:
+                penalty+=loss
+                reasons.append(f"Histograma MACD pierde pendiente (1r {macd1:+.3f}%, 3r {macd3:+.3f}%): -{loss}")
     return {"ma21":round(ma21,3),"ma21_prev":round(previous_ma21,3),
             "cross_up21":up,"cross_down21":down,"sma21_state":state,
-            "sma21_component":rating}
+            "sma21_component":round(cap(base,0,100),2),
+            "sma21_age":age,"sma21_slope_pct3":round(slope3,3),
+            "sma21_distance_atr":round(distance_atr,2) if distance_atr is not None else None,
+            "rsi_delta1":round(delta1,2) if delta1 is not None else None,
+            "rsi_delta3":round(delta3,2) if delta3 is not None else None,
+            "macd_delta1_pct":round(macd1,4) if macd1 is not None else None,
+            "macd_delta3_pct":round(macd3,4) if macd3 is not None else None,
+            "indicator_slope_penalty":penalty,
+            "indicator_slope_reasons":reasons}
+
 
 
 def score_penalties(row: dict) -> tuple[int,list[str]]:
     """Deducciones transparentes por extremos de RSI y ruptura SMA200."""
-    penalty=0
-    reasons=[]
+    penalty=int(row.get("indicator_slope_penalty") or 0)
+    reasons=list(row.get("indicator_slope_reasons") or [])
     daily=row.get("rsi14d")
     if daily is not None:
         if daily>=80: x=30
