@@ -26,6 +26,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from actualizar import compute, get_signal, read_catalog
+from radar_features import cautious_signal
 
 NY = ZoneInfo("America/New_York")
 REPO = Path(__file__).resolve().parents[1]
@@ -86,7 +87,8 @@ def macro_history(spy: pd.DataFrame, qqq: pd.DataFrame, vix: pd.DataFrame) -> di
     return out
 
 
-def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str) -> dict:
+def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
+                         variant: str = 'baseline', vix_by_day: dict | None = None) -> dict:
     """Reutilizar EXACTAMENTE compute/get_signal de producción, con serie truncada en t."""
     frame = normalize(frame)
     decisions = {}
@@ -100,6 +102,11 @@ def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str) -> 
         if row is None:
             continue
         signal, _, _ = get_signal(row, macros[day], True)
+        if variant == "prudente":
+            candidate, _, _ = cautious_signal(row,macros[day],
+                                    (vix_by_day or {}).get(day),True,signal)
+            if candidate == "COMPRA CON PRECAUCIÓN":
+                signal = candidate
         decisions[day] = {"signal": signal, "stop": row["invalid_usd"]}
     return decisions
 
@@ -138,7 +145,7 @@ def simulate(frame: pd.DataFrame, decisions: dict, ticker: str,
             sig = decision.get("signal")
             if shares and sig in EXIT_SIGNALS:
                 sell(day, float(bar["Open"]), "SEÑAL AL CIERRE PREVIO")
-            elif not shares and sig == "COMPRA CONDICIONAL":
+            elif not shares and sig in ("COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN"):
                 stop = decision.get("stop")
                 entry = float(bar["Open"]) * (1 + slip)
                 if stop is not None and math.isfinite(float(stop)) and 0 < float(stop) < entry:
@@ -215,6 +222,7 @@ def main():
     p.add_argument("--tickers", default="AMZN,NVDA,MSFT,META,GOOGL,JPM,TGT,COPX,IREN,TQQQ",
                    help="Subyacentes USA USD separados por coma; no símbolos CEDEAR locales")
     p.add_argument("--years", type=int, choices=range(5, 11), metavar="[5..10]", default=10)
+    p.add_argument("--variant", choices=("baseline","prudente"), default="baseline")
     p.add_argument("--fee-bps", type=float, default=5.0)
     p.add_argument("--slippage-bps", type=float, default=10.0)
     p.add_argument("--out", default="backtest-out", help="Carpeta fuera de docs/")
@@ -227,6 +235,7 @@ def main():
     if any(x not in frames for x in required):
         raise SystemExit("No hay macro completa SPY/QQQ/VIX; NO ejecutar señales de compra")
     macro = macro_history(*(frames[t] for t in required))
+    vix_by_day = normalize(frames["^VIX"])["Close"].to_dict()
     start_date = (datetime.now(NY).date() - timedelta(days=int(args.years * 365.25))).isoformat()
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
@@ -236,7 +245,7 @@ def main():
             totals.append({"ticker": symbol, "estado": "SIN HISTÓRICO"})
             continue
         f = frames[symbol]
-        decisions = historical_decisions(f, macro, start_date)
+        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day)
         valid = f.loc[f.index >= pd.Timestamp(start_date)]
         trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps)
         row = {"ticker": symbol, "estado": "OK", "inicio":str(curve.index[0].date()),
@@ -258,10 +267,10 @@ def main():
             for trade in trades:
                 w.writerow(asdict(trade))
         print(f"{symbol}: {row['n_senales_ejecutadas']} trades, R medio {row['r_promedio']}, DD {row['max_drawdown_pct']}%")
-    report={"version":"baseline-prod-get_signal-2026-11-12",
+    report={"version":"macro-"+args.variant+"-comparacion-2026-11-12",
             "as_of":datetime.now(NY).isoformat(),
             "source":"Yahoo Finance/yfinance OHLC ajustado USD; datos sujetos a revisión",
-            "years_requested":args.years,"fee_bps_per_side":args.fee_bps,
+            "variant":args.variant,"years_requested":args.years,"fee_bps_per_side":args.fee_bps,
             "slippage_bps_per_side":args.slippage_bps,
             "limitations":["sesgo supervivencia (universo actual)", "earnings NO aplicado en código actual",
                 "sin tramos 40/35/25", "sin CEDEAR ARS/CCL", "sin validación de Koncorde",
