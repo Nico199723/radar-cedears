@@ -48,8 +48,7 @@ class FloorAndGreenTests(unittest.TestCase):
         self.assertEqual(s,"ESPERAR")
         self.assertNotEqual(t,"up")
         s,_,_=reconcile_buy_label(asset(69),"COMPRA CON PRECAUCIÓN","caution",[],False)
-        # El dato no fresco no se transforma en compra ni da habilitación nueva.
-        self.assertEqual(s,"COMPRA CON PRECAUCIÓN")
+        self.assertEqual(s,"DATOS VIEJOS")
 
     def test_high_score_hold_becomes_watch_with_reason(self):
         d=asset(88)
