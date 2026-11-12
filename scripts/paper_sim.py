@@ -183,8 +183,9 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
     trigger=bool(d.get("cross_up21")) or a.get("signal")=="COMPRA CONDICIONAL"
     if not trigger:return False,""
     if market!="FAVORABLE":
-        if score<76 or d.get("rsi21w") is None or d["rsi21w"]<52 or (
-           d.get("macd_hist_w") is None or d["macd_hist_w"]<=0):
+        from radar_features import cautious_signal
+        candidate,_,_ = cautious_signal(d,market,vix,True,a.get("signal","ESPERAR"))
+        if candidate!="COMPRA CON PRECAUCIÓN":
             return False,""
     return True,("CRUCE ALCISTA SMA21" if d.get("cross_up21") else "COMPRA CONDICIONAL") + (
         " · MACRO EN PRECAUCIÓN" if market!="FAVORABLE" else "")
