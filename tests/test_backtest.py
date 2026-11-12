@@ -34,6 +34,26 @@ class BacktestTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 download(["AAA","CCC"],5,str(folder))
 
+    def test_ab_compara_regla_score75_con_mismo_cierre(self):
+        from unittest.mock import patch
+        f=frame([100]*243,lows=[99]*243)
+        last=f.index[-1]
+        d={"asset_kind":"ACCION","price":105,"ma21":103,"ma200":90,
+           "rank_score":76,"rsi14d":56,"rsi21w":57,"macd_hist_d":.6,
+           "macd_hist_w":.3,"obv_up10":True,"rvol20":1.25,
+           "dollar_volume20":35_000_000,"volume_confirm_score":80,
+           "rs_verified":True,"stretch_atr20":.5,"invalid_usd":92}
+        macros={last:"FAVORABLE"}
+        with patch("backtest.compute",return_value=d),patch(
+                "backtest.get_signal",return_value=("MANTENER / ESPERAR","hold",[])):
+            old=historical_decisions(f,macros,"2025-01-01",variant="floor70",
+                                     vix_by_day={last:18})
+            new=historical_decisions(f,macros,"2025-01-01",variant="score75",
+                                     vix_by_day={last:18})
+        self.assertEqual(old[last]["signal"],"VIGILAR COMPRA · SCORE")
+        self.assertEqual(new[last]["signal"],"COMPRA CON PRECAUCIÓN")
+        self.assertEqual(old[last]["stop"],new[last]["stop"])
+
     def test_entrada_se_ejecuta_en_open_t_mas_uno(self):
         f = frame([100,105,110,120], lows=[99,104,109,119])
         signals={f.index[0]:{"signal":"COMPRA CONDICIONAL","stop":90},
