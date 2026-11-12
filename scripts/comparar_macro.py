@@ -29,6 +29,8 @@ def compare(base:dict,alternative:dict)->dict:
     if (base["years_requested"],base["fee_bps_per_side"],base["slippage_bps_per_side"]) != (
          alternative["years_requested"],alternative["fee_bps_per_side"],alternative["slippage_bps_per_side"]):
         raise ValueError("Parámetros de comparación distintos")
+    if base.get("paper_sizing")!=alternative.get("paper_sizing"):
+        raise ValueError("Sizing no comparable entre variantes")
     a,b=aggregate(base),aggregate(alternative)
     if set(a["retornos_por_ticker"])!=set(b["retornos_por_ticker"]):
         raise ValueError("Universo distinto")
