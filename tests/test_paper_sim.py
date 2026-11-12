@@ -107,6 +107,15 @@ class PaperTests(unittest.TestCase):
         self.assertLess(s["cash"],INITIAL)
         self.assertEqual(s["fills"][-1]["action"],"STOP LOSS")
 
+    def test_paper_admite_continuacion_prudente_sin_cruce_del_dia(self):
+        a=asset(self.days[1])
+        a["signal"]="COMPRA CON PRECAUCIÓN"
+        a["data"].update({"cross_up21":False,"near20":False,
+                          "stretch_atr20":.85,"rank_score":84})
+        self.assertTrue(evaluate_entry(a,"DEFENSIVO",18)[0])
+        a["data"]["stretch_atr20"]=2.0
+        self.assertFalse(evaluate_entry(a,"DEFENSIVO",18)[0])
+
     def test_entry_in_defensive_requires_weekly_and_vix(self):
         a=asset(self.days[1])
         ok,msg=evaluate_entry(a,"DEFENSIVO",18)
