@@ -35,7 +35,7 @@ def relative_strength(close: pd.Series, spy: pd.Series | None,
         frames.append(s)
     current=frames[0].index[-1] if len(frames[0]) else None
     if current is None:return empty
-    common=pd.concat(frames,axis=1,join="inner").dropna()
+    common=pd.concat(frames,axis=1,join="inner",keys=["asset","spy","qqq"]).dropna()
     common=common.loc[:current]
     if len(common)<period+1 or common.index[-1]!=current:
         return empty
