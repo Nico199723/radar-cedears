@@ -129,7 +129,7 @@ def cautious_signal(row: dict | None, market: str, vix: float | None,
             "Hay fuerza, volumen y estructura semanal, pero falta cruce/retroceso/ruptura de entrada")
     return "COMPRA CON PRECAUCIÓN", "wait", (
         "SPY/QQQ débiles NO bloquean la excepción: confirmar gatillo SMA21/volumen "
-        "y operar en 40/35/25 con tope simulado USD 120, reserva >=70%, stop "
+        "y asumir riesgo acotado en 40/35/25 con tope simulado USD 120, reserva >=70%, stop "
         "de referencia 6% (los gaps pueden superar el stop); sin orden automática")
 
 
