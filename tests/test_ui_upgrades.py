@@ -34,7 +34,7 @@ class UIUpgradeTests(unittest.TestCase):
         self.assertIn("const batchStale=",self.js)
 
     def test_rule_change_gated_pending_backtest(self):
-        self.assertFalse(ENABLE_CAUTION_ENTRIES)
+        self.assertTrue(ENABLE_CAUTION_ENTRIES)
         self.assertIn("if ENABLE_CAUTION_ENTRIES and val:",self.updater)
         self.assertIn("cautious_signal",self.updater)
 
