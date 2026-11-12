@@ -160,17 +160,17 @@ function renderPaper(){
  $('paperCash').textContent=usd(p.cash_usd);
  $('paperReturn').textContent=signedPct(p.return_pct)+' ('+signedUsd(p.equity_usd-p.initial_capital_usd)+')';
  $('paperReturn').className=Number(p.return_pct)>=0?'sma21-up':'sma21-down';
- $('paperTrades').textContent=String(p.closed_count??0)+(p.win_rate_pct==null?'':' · acierto '+fmt(p.win_rate_pct)+'%');
+ $('paperTrades').textContent=String(p.closed_count??0)+' finales / '+String(p.partial_exit_count??0)+' parciales'+(p.win_rate_pct==null?'':' · acierto '+fmt(p.win_rate_pct)+'%');
  $('paperDD').textContent=fmt(p.max_drawdown_pct)+'%';
  $('paperGraph').innerHTML=linePaper(p.equity_history||[]);
  const pos=p.open_positions||[];
  $('paperPositions').innerHTML=pos.length?pos.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.last_price_usd)}</td><td>${usd(x.stop_usd)}</td><td class="${x.unrealized_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.unrealized_usd)}</td><td>${esc(x.sessions_held)}</td></tr>`).join(''):'<tr><td colspan="8">Sin posiciones abiertas. El efectivo queda en reserva mientras no aparezcan condiciones.</td></tr>';
  const closed=[...(p.closed_trades||[])].reverse();
- $('paperClosed').innerHTML=closed.length?closed.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${day(x.exit_date)}</td><td>${esc(x.holding_sessions)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.exit_usd)}</td><td class="${x.pnl_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.pnl_usd)}</td><td>${signedPct(x.return_pct)}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="10">Todavía no se cerraron operaciones simuladas.</td></tr>';
+ $('paperClosed').innerHTML=closed.length?closed.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${day(x.exit_date)}</td><td>${esc(x.holding_sessions)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.exit_usd)}</td><td class="${x.pnl_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.pnl_usd)}</td><td>${signedPct(x.return_pct)}</td><td><strong>${x.partial?"PARCIAL "+fmt(x.exit_fraction_pct)+"%":"FINAL"}</strong><span class="ticker-sub">${esc(x.reason)}</span></td></tr>`).join(''):'<tr><td colspan="10">Todavía no hubo salidas parciales ni finales simuladas.</td></tr>';
  const fills=[...(p.fills||[])].reverse();
  $('paperFills').innerHTML=fills.length?fills.map(x=>`<tr><td>${day(x.date)}</td><td>${esc(x.usa)}</td><td><span class="pill ${x.action==='STOP LOSS'?'down':x.action.startsWith('COMPRA')?'up':'hold'}">${esc(x.action)}</span></td><td>${usd(x.price_usd)}</td><td>${fmt(x.shares)}</td><td>${usd(x.amount_usd)}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="7">Todavía no hay compras ni ventas ejecutadas en la simulación.</td></tr>';
  const waiting=p.pending_orders||[];
- $('paperPending').innerHTML=waiting.length?waiting.map(x=>`<tr><td>${day(x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(x.side==='BUY'?'COMPRA '+(x.tranche||1)+'/3':'VENTA')}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="4">Sin órdenes pendientes para el próximo open.</td></tr>';
+ $('paperPending').innerHTML=waiting.length?waiting.map(x=>`<tr><td>${day(x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(x.side==='BUY'?'COMPRA '+(x.tranche||1)+'/3':(Number(x.fraction??1)<1?'VENTA PARCIAL '+fmt(Number(x.fraction)*100)+'%':'VENTA TOTAL'))}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="4">Sin órdenes pendientes para el próximo open.</td></tr>';
 }
 async function loadPaper(){
  try{
