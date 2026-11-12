@@ -98,7 +98,7 @@ class FeatureTests(unittest.TestCase):
             q=dict(d);q[k]=v
             sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
             self.assertNotEqual(sig,"COMPRA CON PRECAUCIÓN")
-        q=dict(d);q["near20"]=False
+        q=dict(d);q["near20"]=False;q["stretch_atr20"]=1.3
         sig,_,_=cautious_signal(q,"MIXTO",17,True,"ESPERAR MACRO")
         self.assertEqual(sig,"VIGILAR COMPRA · MACRO")
 
