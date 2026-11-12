@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength, risk_policy, buy_candidate
+from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength, risk_policy, buy_candidate, legacy_entry_rank
 from earnings import earnings_for_candidates, event_label
 from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
 from paper_store import load_or_initialize
@@ -197,6 +197,11 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
     result.update(volumes)
     result.update(sma21)
     result.update(rs)
+    # La estrategia de compras se conserva durante la prueba forward/OOS:
+    # mostrar Score Oportunidad nuevo sin alterar ocultamente el umbral actual.
+    old_rank,old_penalty=legacy_entry_rank(c,rsi_daily,macd_daily,result,is_stock)
+    result["rank_score_signal"]=old_rank
+    result["rank_penalty_signal"]=old_penalty
     result["rank_score"] = ranking_stock_21(result) if is_stock else ranking_score(result)
     result["asset_kind"] = "ACCION" if is_stock else "ETF / INDICE / NO CLASIFICADO"
     return result
@@ -393,7 +398,7 @@ def main():
                                  for label in sorted({a['signal'] for a in assets})},
           'sector_signal_counts':{label:sum(a['signal']==label for a in sectors)
                                   for label in sorted({a['signal'] for a in sectors})},
-          'note':'Score Oportunidad continuo: SMA21 por distancia ATR/edad, RSI/MACD por pendiente, RSI extremo y SMA200 con penalización gradual; RS SPY/QQQ y volumen. Desde 62/100 VIGILAR, desde 75 prioridad, sin compra automática por puntaje. Compras condicionadas con verde normal/precaución. Track record simulado sin cambios de criterio. OOS por validar; CEDEAR BYMA sin validar.'},
+          'note':'Score Oportunidad nuevo y continuo es informativo (SMA21/RSI/MACD/OBV). Vigilar desde 62/100; prioridad 75. La habilitación real sigue temporalmente con score antiguo rank_score_signal para no recalibrar compras sin backtest OOS. Dos verdes para comprar normal/prudente; track record simulado sin reiniciar. BYMA sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
         'assets':assets,'sectors':sectors,'top5':selection,'risk_policy_paper':risk_policy(macro,vixvalue)
