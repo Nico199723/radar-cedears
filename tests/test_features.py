@@ -74,7 +74,7 @@ class FeatureTests(unittest.TestCase):
                 "rsi14d":57,"rsi21w":58,"macd_hist_d":.4,"macd_hist_w":.2,
                 "rvol20":1.4,"dollar_volume20":25_000_000,"obv_up10":True,
                 "stretch_atr20":.5,"near20":True,"breakout":False,
-                "rank_score":81,"rs_verified":True,"rs_spy20":5,"rs_qqq20":4,
+                "rank_score":81,"rs_verified":True,"rs_score":70,"rs_spy20":5,"rs_qqq20":4,
                 "volume_confirm_score":85,"rank_penalty":0,"sma21_age":3}
 
     def test_cautious_macro_can_find_exception(self):
