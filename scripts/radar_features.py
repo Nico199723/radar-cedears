@@ -71,15 +71,19 @@ def volume_profile(frame: pd.DataFrame) -> dict:
     ma20 = float(c.tail(20).mean())
     extension = (float(c.iloc[-1])-ma20)/atr if atr>0 else None
     volume_score = cap(5 + cap((rvol - 1) * 5, -3, 3) + (2 if obv_up else -2), 0, 10) if rvol is not None else None
-    # Volumen atípico sólo es alcista si confirma precio y OBV.
-    price_up=bool(c.iloc[-1]>=c.iloc[-2])
+    # Confirmación como espectro: magnitud de pendiente OBV, precio y RVOL.
+    # Un cierre 0,01% en rojo no debe restar de golpe 30 puntos de volumen.
+    obv_delta=(float(obv.iloc[-1])-float(obv.iloc[-11]))/(max(base,1.)*10)
+    obv_slope=math.tanh(obv_delta/.35)
+    price_impulse=(float(c.iloc[-1])-float(c.iloc[-2]))/max(atr,.001)
+    price_slope=math.tanh(price_impulse/.9)
     if rvol is None:
         volume_confirm=None
     else:
-        impact=cap((rvol-.8)*30,0,35)
-        volume_confirm=cap(45+(15 if obv_up else -15)
-                           +(impact if price_up and obv_up else -impact)
-                           +(5 if price_up else -8),0,100)
+        atypical=math.tanh((rvol-1)/.8)
+        confirmation=.65*obv_slope+.35*price_slope
+        volume_confirm=cap(50+17*obv_slope+12*price_slope
+                           +20*atypical*confirmation,0,100)
     return {
         "rvol20": round(rvol, 2) if rvol is not None else None,
         "dollar_volume20": round(dv, 0),
@@ -88,6 +92,7 @@ def volume_profile(frame: pd.DataFrame) -> dict:
         "stretch_atr20": round(extension, 2) if extension is not None else None,
         "volume_score": round(volume_score, 2) if volume_score is not None else None,
         "volume_confirm_score": round(volume_confirm,2) if volume_confirm is not None else None,
+        "obv_impulse10":round(obv_delta,3),"price_impulse_atr":round(price_impulse,3),
     }
 
 
