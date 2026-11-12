@@ -78,20 +78,20 @@
           <h2>Track record · Capital inicial US$ 2.000</h2></div>
         <span class="muted" id="paperCut">Sin registros todavía</span>
       </div>
-      <p class="paper-description">Simulación forward desde su creación, no reconstruye operaciones históricas. Compras 40/35/25, riesgo teórico máximo US$ 20 por posición, 50% de reserva, stop inicial y trailing del 8%. Se simula al <strong>OPEN siguiente</strong>, con comisión y slippage de 0,05% y 0,10% por lado; los gaps pueden generar pérdidas superiores al 8%.</p>
+      <p class="paper-description">Simulación forward desde su creación, no reconstruye operaciones históricas. Compras 40/35/25. Salidas escalonadas: 50% al objetivo 2R; 50% ante una primera señal de reducción o deterioro SMA21/MACD; resto con trailing. Stop o ruptura estructural liquidan el 100%. Riesgo teórico máximo US$ 20 por posición, reserva del 50% y stop inicial/trailing del 8%. Se simula al <strong>OPEN siguiente</strong>, con comisión y slippage de 0,05% y 0,10% por lado; los gaps pueden generar pérdidas superiores al 8%.</p>
       <div class="paper-status" id="paperStatus">Buscando historial de operaciones...</div>
       <div class="paper-stats">
         <div class="paper-stat"><span>Patrimonio simulado</span><strong id="paperEquity">—</strong></div>
         <div class="paper-stat"><span>Efectivo libre</span><strong id="paperCash">—</strong></div>
         <div class="paper-stat"><span>Resultado acumulado</span><strong id="paperReturn">—</strong></div>
-        <div class="paper-stat"><span>Operaciones cerradas</span><strong id="paperTrades">—</strong></div>
+        <div class="paper-stat"><span>Posiciones cerradas / ventas parciales</span><strong id="paperTrades">—</strong></div>
         <div class="paper-stat"><span>Máximo drawdown</span><strong id="paperDD">—</strong></div>
       </div>
       <div class="paper-graph" id="paperGraph"></div>
       <h3 class="paper-subtitle">Posiciones abiertas</h3>
       <div class="tablebox"><table><thead><tr><th>Activo USA</th><th>Compra inicial</th><th>Tramos</th><th>Costo promedio</th><th>Último USD</th><th>Stop USD</th><th>Resultado flotante</th><th>Ruedas</th></tr></thead><tbody id="paperPositions"><tr><td colspan="8">Sin operaciones registradas.</td></tr></tbody></table></div>
-      <h3 class="paper-subtitle">Operaciones cerradas y tiempo de tenencia</h3>
-      <div class="tablebox"><table><thead><tr><th>Activo USA</th><th>Entrada</th><th>Salida</th><th>Ruedas</th><th>Tramos</th><th>Costo USD</th><th>Venta USD</th><th>Resultado USD</th><th>Rendimiento</th><th>Motivo</th></tr></thead><tbody id="paperClosed"><tr><td colspan="10">Todavía no hay operaciones cerradas.</td></tr></tbody></table></div>
+      <h3 class="paper-subtitle">Salidas parciales y finales · tiempo de tenencia</h3>
+      <div class="tablebox"><table><thead><tr><th>Activo USA</th><th>Entrada</th><th>Salida</th><th>Ruedas</th><th>Tramos</th><th>Costo USD</th><th>Venta USD</th><th>Resultado USD</th><th>Rendimiento</th><th>Tipo de salida / motivo</th></tr></thead><tbody id="paperClosed"><tr><td colspan="10">Todavía no hay salidas registradas.</td></tr></tbody></table></div>
       <h3 class="paper-subtitle">Registro de compras, ventas y stops</h3>
       <div class="tablebox"><table><thead><tr><th>Fecha</th><th>Activo</th><th>Evento</th><th>Precio USD</th><th>Acciones</th><th>Monto USD</th><th>Motivo</th></tr></thead><tbody id="paperFills"><tr><td colspan="7">No hubo fills simulados todavía.</td></tr></tbody></table></div>
       <h3 class="paper-subtitle">Órdenes pendientes para la próxima apertura</h3>
