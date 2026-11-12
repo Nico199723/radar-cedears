@@ -128,7 +128,9 @@ def sell_fraction(s:dict, usa:str, day:str, price:float, reason:str,
         p["profit_taken"]=True
         # Una vez realizado 2R, el restante no puede quedarse por debajo
         # del break-even conocido. El precio de ejecución no está garantizado.
-        p["stop_usd"]=number(max(p["stop_usd"],p["spent"]/p["shares"]),4)
+        break_even=p["spent"]/p["shares"] / (
+            (1-SLIP_BPS/10000)*(1-FEE_BPS/10000))
+        p["stop_usd"]=math.ceil(max(p["stop_usd"],break_even)*10000)/10000
     if "REDUCIR" in reason or "DEBILIDAD" in reason:
         p["reduction_taken"]=True
     # Ya no agregamos nuevas compras a una posición que comenzó a descargarse.
