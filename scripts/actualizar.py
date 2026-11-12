@@ -319,7 +319,7 @@ def main():
         val=technical.get(us) if us else None
         fresh=is_fresh(val)
         signal,tone,why = get_signal(val,macro,fresh)
-        if ENABLE_CAUTION_ENTRIES and val:
+        if ENABLE_CAUTION_ENTRIES and val and val.get("asset_kind")=="ACCION":
             candidate, candidate_tone, note = cautious_signal(val,macro,vixvalue,fresh,signal)
             if candidate != signal:
                 signal,tone=candidate,candidate_tone
