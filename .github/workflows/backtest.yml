@@ -48,6 +48,10 @@ jobs:
           python scripts/backtest.py --years "$YEARS" --variant baseline --data-cache backtest-out/market --out backtest-out/base --fee-bps 5 --slippage-bps 10
           python scripts/backtest.py --years "$YEARS" --variant prudente --data-cache backtest-out/market --out backtest-out/prudente --fee-bps 5 --slippage-bps 10
           python scripts/comparar_macro.py
+          echo "### A/B: Score O >=70 vs habilitar precautoria >=75" >> "$GITHUB_STEP_SUMMARY"
+          python scripts/backtest.py --years "$YEARS" --variant floor70 --data-cache backtest-out/market --out backtest-out/floor70 --fee-bps 5 --slippage-bps 10
+          python scripts/backtest.py --years "$YEARS" --variant score75 --data-cache backtest-out/market --out backtest-out/score75 --fee-bps 5 --slippage-bps 10
+          python scripts/comparar_macro.py --base backtest-out/floor70/resumen.json --prudente backtest-out/score75/resumen.json --out backtest-out/comparacion-score75.json | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Guardar resultados (sin commit, sin publicar en Pages)
         uses: actions/upload-artifact@v4
         with:
@@ -55,6 +59,9 @@ jobs:
           path: |
             backtest-out/base/
             backtest-out/prudente/
+            backtest-out/floor70/
+            backtest-out/score75/
             backtest-out/comparacion.json
+            backtest-out/comparacion-score75.json
             backtest-out/market/manifest.json
           retention-days: 30
