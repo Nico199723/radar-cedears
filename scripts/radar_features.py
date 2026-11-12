@@ -13,6 +13,46 @@ def cap(x, a, b):
     return min(b, max(a, x))
 
 
+def relative_strength(close: pd.Series, spy: pd.Series | None,
+                      qqq: pd.Series | None, period: int = 20) -> dict:
+    """Exceso de retorno de 20 ruedas sobre SPY/QQQ con fechas comunes.
+
+    Sólo hay RS verificada si los tres activos tienen cierre en la fecha t.
+    Se usan t y t-20 de la intersección pasada; nunca precios posteriores.
+    """
+    empty={"rs_spy20":None,"rs_qqq20":None,"rs_score":None,
+           "rs_verified":False}
+    if spy is None or qqq is None or close is None:
+        return empty
+    frames=[]
+    for series in (close,spy,qqq):
+        s=pd.to_numeric(series,errors="coerce").copy()
+        s.index=pd.to_datetime(s.index)
+        if s.index.tz is not None:
+            s.index=s.index.tz_convert("America/New_York").tz_localize(None)
+        s.index=s.index.normalize()
+        s=s[~s.index.duplicated(keep="last")].sort_index()
+        frames.append(s)
+    current=frames[0].index[-1] if len(frames[0]) else None
+    if current is None:return empty
+    common=pd.concat(frames,axis=1,join="inner").dropna()
+    common=common.loc[:current]
+    if len(common)<period+1 or common.index[-1]!=current:
+        return empty
+    for col in common.columns:
+        if not (common[col].iloc[-1]>0 and common[col].iloc[-period-1]>0):
+            return empty
+    rets=(common.iloc[-1]/common.iloc[-period-1]-1)*100
+    excess_spy=float(rets.iloc[0]-rets.iloc[1])
+    excess_qqq=float(rets.iloc[0]-rets.iloc[2])
+    avg=(excess_spy+excess_qqq)/2
+    # 50 = rendimiento similar a índices, ventaja sostenida suma puntos.
+    # Superar SPY pero rezagar mucho a QQQ no se considera liderazgo pleno.
+    score=cap(50+3*avg+max(-20,min(20,1.5*min(excess_spy,excess_qqq))),0,100)
+    return {"rs_spy20":round(excess_spy,2),"rs_qqq20":round(excess_qqq,2),
+            "rs_score":round(score,2),"rs_verified":True}
+
+
 def volume_profile(frame: pd.DataFrame) -> dict:
     """Indicadores al cierre t. RVOL usa las 20 sesiones ANTERIORES."""
     v = frame["Volume"].astype(float)
@@ -20,7 +60,7 @@ def volume_profile(frame: pd.DataFrame) -> dict:
     h, l = frame["High"].astype(float), frame["Low"].astype(float)
     if len(frame) < 40 or v.iloc[-21:].isna().any() or not (v.iloc[-21:] >= 0).all():
         return {"rvol20": None, "dollar_volume20": None, "obv_up10": None,
-                "atr14": None, "stretch_atr20": None, "volume_score": None}
+                "atr14": None, "stretch_atr20": None, "volume_score": None, "volume_confirm_score": None}
     base = float(v.iloc[-21:-1].mean())
     rvol = float(v.iloc[-1] / base) if base > 0 else None
     dv = float((c.tail(20) * v.tail(20)).mean())
@@ -31,6 +71,15 @@ def volume_profile(frame: pd.DataFrame) -> dict:
     ma20 = float(c.tail(20).mean())
     extension = (float(c.iloc[-1])-ma20)/atr if atr>0 else None
     volume_score = cap(5 + cap((rvol - 1) * 5, -3, 3) + (2 if obv_up else -2), 0, 10) if rvol is not None else None
+    # Volumen atípico sólo es alcista si confirma precio y OBV.
+    price_up=bool(c.iloc[-1]>=c.iloc[-2])
+    if rvol is None:
+        volume_confirm=None
+    else:
+        impact=cap((rvol-.8)*30,0,35)
+        volume_confirm=cap(45+(15 if obv_up else -15)
+                           +(impact if price_up and obv_up else -impact)
+                           +(5 if price_up else -8),0,100)
     return {
         "rvol20": round(rvol, 2) if rvol is not None else None,
         "dollar_volume20": round(dv, 0),
@@ -38,6 +87,7 @@ def volume_profile(frame: pd.DataFrame) -> dict:
         "atr14": round(atr, 4),
         "stretch_atr20": round(extension, 2) if extension is not None else None,
         "volume_score": round(volume_score, 2) if volume_score is not None else None,
+        "volume_confirm_score": round(volume_confirm,2) if volume_confirm is not None else None,
     }
 
 
@@ -68,20 +118,77 @@ def sma21_priority(close: pd.Series) -> dict:
             "sma21_component":rating}
 
 
-def ranking_stock_21(row: dict) -> int | None:
-    """Acciones individuales: 65% base, 15% volumen, 20% SMA21 diaria."""
-    sc,vol,m21=row.get("score"),row.get("volume_score"),row.get("sma21_component")
-    if any(v is None for v in (sc,vol,m21)):
+def score_penalties(row: dict) -> tuple[int,list[str]]:
+    """Deducciones transparentes por extremos de RSI y ruptura SMA200."""
+    penalty=0
+    reasons=[]
+    daily=row.get("rsi14d")
+    if daily is not None:
+        if daily>=80: x=30
+        elif daily>=75: x=22
+        elif daily>=70: x=12
+        elif daily>=67: x=5
+        elif daily<=25: x=24
+        elif daily<=30: x=17
+        elif daily<=35: x=10
+        elif daily<=40: x=5
+        else:x=0
+        if x:
+            penalty+=x
+            reasons.append(f"RSI14 diario {daily:.1f}: -{x}")
+    weekly=row.get("rsi21w")
+    if weekly is not None and (weekly>=75 or weekly<=30):
+        penalty+=8
+        reasons.append("RSI21 semanal extremo: -8")
+    monthly=row.get("rsi21m")
+    if monthly is not None and (monthly>=75 or monthly<=25):
+        penalty+=8
+        reasons.append("RSI21 mensual extremo: -8")
+    price,ma200=row.get("price"),row.get("ma200")
+    if price is not None and ma200 is not None and ma200>0 and price<ma200:
+        below=(1-price/ma200)*100
+        x=min(30,20+int(below//2))
+        penalty+=x
+        reasons.append(f"Bajo SMA200 ({below:.1f}%): -{x}")
+    return penalty,reasons
+
+
+def opportunity_score(row: dict, is_stock: bool=True) -> int | None:
+    """Ranking 0..100. RS30%, volumen20%, SMA21 20%/15%, base30%/35%.
+
+    No sustituye score histórico de las reglas principales. Si no se pueden
+    verificar ambos benchmarks, se marca como NO VERIFICADO y descuenta 12 pts.
+    """
+    components=(row.get("score"),row.get("sma21_component"),row.get("volume_confirm_score"))
+    if any(x is None for x in components):
         return None
-    return round(cap(.65*float(sc) + 1.5*float(vol) + .20*float(m21),0,100))
+    base,sma21,volume=(float(x) for x in components)
+    rs=row.get("rs_score")
+    verified=bool(row.get("rs_verified")) and rs is not None
+    strength=float(rs) if verified else 50.
+    wb,wm=(.30,.20) if is_stock else (.35,.15)
+    pre=wb*base+wm*sma21+.30*strength+.20*volume
+    penalty,notes=score_penalties(row)
+    if not verified:
+        penalty+=12
+        notes.append("Fuerza relativa SPY/QQQ no verificada: -12")
+    row["rank_penalty"]=penalty
+    row["rank_penalty_reasons"]=notes
+    row["rank_components"]={
+        "technical":round(wb*base,2),"sma21":round(wm*sma21,2),
+        "rs_spy_qqq":round(.30*strength,2),
+        "volume":round(.20*volume,2),
+        "penalty":-penalty,
+    }
+    return round(cap(pre-penalty,0,100))
+
+
+def ranking_stock_21(row: dict) -> int | None:
+    return opportunity_score(row,True)
 
 
 def ranking_score(row: dict) -> int | None:
-    """85% técnico tradicional + 15% confirmación volumen (0..100)."""
-    b,v=row.get("score"),row.get("volume_score")
-    if b is None or v is None:
-        return None
-    return round(cap(.85*float(b) + 1.5*float(v),0,100))
+    return opportunity_score(row,False)
 
 
 def cautious_signal(row: dict | None, market: str, vix: float | None,
