@@ -327,7 +327,10 @@ def main():
         if not us:
             signal,tone,why='SIN SUBYACENTE USA','neutral',['No existe mapeo USD estadounidense confiable; no usar ticker homónimo']
         prudent=macro in ("DEFENSIVO","MIXTO")
-        risk_plan=({"mode":"PRUDENTE","max_position_usd":120,
+        risk_plan=({"mode":"SIN ENTRADAS","max_position_usd":0,
+                    "min_reserve_pct":100,"reference_stop_pct":None,"risk_at_stop_usd":0}
+                   if (macro=="NO VERIFICADO" or vixvalue is None or vixvalue>=25) else
+                   {"mode":"PRUDENTE","max_position_usd":120,
                     "min_reserve_pct":70,"reference_stop_pct":6,"risk_at_stop_usd":7.2}
                    if prudent else
                    {"mode":"NORMAL","max_position_usd":250,
