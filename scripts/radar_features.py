@@ -367,8 +367,11 @@ def reconcile_buy_label(row: dict | None, signal: str, tone: str,
     - ¿Es sólo una oportunidad a vigilar?
     No convertir un 90/100 automáticamente en entrada ni ocultarlo en HOLD.
     """
-    if not fresh or row is None or signal.startswith(
-            ("SALIR","REDUCIR","DATOS","SIN")):
+    if not fresh or row is None:
+        if signal in ("COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN"):
+            return "DATOS VIEJOS","neutral",reasons+["No habilitar compra sin datos actuales"]
+        return signal,tone,reasons
+    if signal.startswith(("SALIR","REDUCIR","DATOS","SIN")):
         return signal,tone,reasons
     rank=row.get("rank_score")
     if rank is None or not math.isfinite(float(rank)):
