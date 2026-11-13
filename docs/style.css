@@ -74,3 +74,8 @@
 .top5-card:has(.pill.up){border-color:#27794f}
 .top5-card:has(.pill.caution){border-color:#4c855f}
 #buyCaption{line-height:1.35}
+
+/* Rebote experimental, aislado del semáforo verde de tendencia */
+.rebound-warning{padding:14px 16px;border:1px dashed #b98538;background:rgba(154,93,29,.12);border-radius:12px;color:#f6d6a5;font-size:13px;line-height:1.6;margin:16px 0 20px}
+.rebound-risk{display:inline-block;color:#f7d6a2!important;border:1px solid #b9863a;border-radius:6px;padding:4px 6px;font-weight:750;font-size:10px;letter-spacing:.04em;background:#443119}
+#reboundRows td{vertical-align:middle}
