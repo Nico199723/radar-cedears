@@ -20,6 +20,12 @@ BUY_SIGNALS={"COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN"}
 WATCH_SIGNALS={"VIGILAR COMPRA · SCORE","VIGILAR COMPRA · GATILLO"}
 OPPORTUNITY_SIGNALS=BUY_SIGNALS|WATCH_SIGNALS
 
+
+def is_opportunity(signal:str)->bool:
+    # Capturar también VIGILAR COMPRA legado, no sólo etiquetas nuevas.
+    return signal in BUY_SIGNALS or signal.startswith("VIGILAR COMPRA")
+
+
 @dataclass(frozen=True)
 class Decision:
     signal:str
@@ -144,16 +150,16 @@ def audit_consistency(assets:list[dict], *, require_score:bool=True)->list[dict]
         data=a.get("data") or {}
         score=a.get("score_decision",data.get("rank_score"))
         vetoes=tuple(a.get("vetoes") or ())
-        if require_score and score is None and signal in OPPORTUNITY_SIGNALS:
+        if require_score and score is None and is_opportunity(signal):
             violations.append({"ticker":ticker,"reason":"opportunity_without_score"})
             continue
-        if signal in OPPORTUNITY_SIGNALS and score is not None and score<BUY_FLOOR:
+        if is_opportunity(signal) and score is not None and score<BUY_FLOOR:
             violations.append({"ticker":ticker,"reason":"opportunity_below_floor",
                                "score":score})
-        if signal in OPPORTUNITY_SIGNALS and vetoes:
+        if is_opportunity(signal) and vetoes:
             violations.append({"ticker":ticker,"reason":"opportunity_with_hard_veto",
                                "vetoes":list(vetoes)})
-        if score is not None and score>=BUY_FLOOR and vetoes and signal in OPPORTUNITY_SIGNALS:
+        if score is not None and score>=BUY_FLOOR and vetoes and is_opportunity(signal):
             violations.append({"ticker":ticker,"reason":"high_score_veto_marked_opportunity"})
         if signal=="SCORE ALTO · VETADO" and not vetoes:
             violations.append({"ticker":ticker,"reason":"veto_label_without_veto"})
