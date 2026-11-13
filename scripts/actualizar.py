@@ -397,6 +397,9 @@ def main():
         logging.warning("Auditoría de señales VIGENTES: %d contradicciones "
                         "(motor unificado aún no habilitado). Ejemplo: %s",
                         len(production_violations),production_violations[:3])
+    # Estrategia separada: no comparte puntaje, no altera señal ni ledger.
+    from rebound import scan_rebounds, RULES_VERSION as REBOUND_RULES_VERSION
+    rebounds=scan_rebounds(catalog,frames,earnings_dates,now,technical=technical)
     proposed_top5=top_five_by_decision(proposal)
     selection=top_five(assets,spy,macro)
     sectors=[]
@@ -434,6 +437,9 @@ def main():
           'proposed_consistency_count':len(consistency_violations),
           'decision_mode':'SHADOW · NO MODIFICA SEÑALES PUBLICADAS',
           'paper_version':PAPER_VERSION,
+          'rebound_rules_version':REBOUND_RULES_VERSION,
+          'rebound_status':'EXPERIMENTAL · PAPER REBOUND DESACTIVADO',
+          'paper_rebound':False,
           'earnings_coverage':earnings_coverage,
           'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
                                  for label in sorted({a['signal'] for a in assets})},
@@ -444,6 +450,7 @@ def main():
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
         'assets':assets,'sectors':sectors,'top5':selection,
         'top5_proposed':proposed_top5,
+        'rebounds':rebounds,
         'risk_policy_paper':risk_policy(macro,vixvalue)
     }
     # Forward-paper: cada run restaura un ledger previo, nunca inventa fills del pasado.
