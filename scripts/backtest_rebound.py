@@ -67,15 +67,17 @@ def simulate(frame:pd.DataFrame,signals:dict,ticker:str,fee_bps=5,slip_bps=10,
         bar=f.iloc[i]
         if shares:
             held+=1
+            # El stop temporal se ejecuta al OPEN de la rueda 8 (7 tenidas)
+            # ANTES de inspeccionar High/Low futuros de esa misma vela.
             if float(bar["Open"])<=entry["stop"]:
                 sell(i,float(bar["Open"]),"STOP GAP")
+            elif held>time_stop_sessions:
+                sell(i,float(bar["Open"]),"TIEMPO")
             elif float(bar["Low"])<=entry["stop"]:
                 sell(i,entry["stop"],"STOP")
             elif float(bar["High"])>=entry["target"]:
                 # Si target y stop ocurren en la misma vela, gana el STOP.
                 sell(i,entry["target"],"TARGET")
-            elif held>time_stop_sessions:
-                sell(i,float(bar["Open"]),"TIEMPO")
         if not shares and i>0 and day!=f.index[0]:
             previous=f.index[i-1]
             d=signals.get(previous)
