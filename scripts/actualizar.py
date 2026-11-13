@@ -382,6 +382,21 @@ def main():
     if consistency_violations:
         raise RuntimeError("Auditoría de decisiones v2 falló: "+
                            str(consistency_violations[:20]))
+    # Medir también las contradicciones REALES del motor vigente, sin
+    # fingir que el cero del shadow representa al data.json operativo.
+    # Se exponen como diagnóstico hasta aprobar el cambio tras backtest.
+    production_audit=[]
+    for item in assets:
+        preview=item["decision_v2_preview"]
+        production_audit.append({
+            "ticker":item["ticker"],"usa":item.get("usa"),"data":item.get("data"),
+            "score_decision":preview["score_decision"],
+            "signal":item["signal"],"vetoes":preview["vetoes"]})
+    production_violations=audit_consistency(production_audit)
+    if production_violations:
+        logging.warning("Auditoría de señales VIGENTES: %d contradicciones "
+                        "(motor unificado aún no habilitado). Ejemplo: %s",
+                        len(production_violations),production_violations[:3])
     proposed_top5=top_five_by_decision(proposal)
     selection=top_five(assets,spy,macro)
     sectors=[]
@@ -414,6 +429,9 @@ def main():
           'rules_version':'1.6-score-espectro-candidatas-62-prioridad-75',
           'staged_rules_version':DECISION_RULES_VERSION,
           'consistency_violations':consistency_violations,
+          'production_consistency_violations':production_violations,
+          'production_consistency_count':len(production_violations),
+          'proposed_consistency_count':len(consistency_violations),
           'decision_mode':'SHADOW · NO MODIFICA SEÑALES PUBLICADAS',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
