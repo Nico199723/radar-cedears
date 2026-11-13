@@ -411,7 +411,12 @@ def main():
     state=load_or_initialize(latest_day,now.isoformat(timespec="seconds"))
     state=process_ledger(state,paper_frames,assets,macro,vixvalue,latest_day)
     paper_public=public_summary(state,paper_frames)
-    result["meta"]["paper_snapshot_day"]=latest_day
+    result["meta"]["paper_snapshot_day"]=state["last_session"]
+    result["meta"]["paper_market_data_regressed"]=(latest_day<state["last_session"])
+    if latest_day<state["last_session"]:
+        logging.warning("Paper sin operaciones por OHLC anterior al ledger; "
+                        "fecha pública del mercado %s / ledger %s",
+                        latest_day,state["last_session"])
     state_path=ROOT/".paper"/"ledger.json"
     state_path.parent.mkdir(parents=True,exist_ok=True)
     state_tmp=state_path.with_suffix(".json.tmp")
