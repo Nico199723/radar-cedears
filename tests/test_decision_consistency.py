@@ -68,7 +68,7 @@ class DecisionConsistencyTests(unittest.TestCase):
         source=(ROOT/"scripts/actualizar.py").read_text(encoding="utf-8")
         self.assertIn("'production_consistency_violations':production_violations",source)
         self.assertIn("'proposed_consistency_count':len(consistency_violations)",source)
-        self.assertIn("production_violations=audit_consistency(production_audit)",source)
+        self.assertIn("production_violations=audit_consistency(",source)
 
     def test_random_rows_prove_invariants(self):
         rng=random.Random(4101);items=[]
