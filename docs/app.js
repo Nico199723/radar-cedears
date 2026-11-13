@@ -20,7 +20,7 @@ const eventHtml=x=>{
 const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=72?'good':v<35?'bad':''}">${esc(v)}</span>`;
 const day=(s)=>{if(!s)return '—';try{return new Date(s+'T12:00:00').toLocaleDateString('es-AR')}catch(e){return s}};
 const group=s=>{s=String(s||'');if(s==='COMPRA CONDICIONAL'||s==='COMPRA CON PRECAUCIÓN')return 'compra';if(s.startsWith('VIGILAR COMPRA'))return 'vigilancia';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'esperar';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
-function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['sectores','pageSectores'],['cartera','pageCartera'],['simulador','pageSimulador'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
+function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['rebotes','pageRebotes'],['sectores','pageSectores'],['cartera','pageCartera'],['simulador','pageSimulador'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
 function baseline(){return {meta:{source:'Catálogo local · pendiente de ejecución inicial',universe_size:0,mapped_us:0,download_coverage:0},macro:{state:'NO VERIFICADO'},assets:[],sectors:[]}}
 function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];const generated=m.generated_at_ar?new Date(m.generated_at_ar):null;const age=generated?(Date.now()-generated.getTime())/(3600000):9999;const coverage=Number(m.download_coverage||0);
  const fresh=generated&&age<=36&&age>=-1;const banner=$('criticalBanner');
@@ -48,6 +48,22 @@ function renderAssets(){const q=$('searchInput').value.toLowerCase().trim(),sect
  const visible=arr.slice(0,400);
  $('assetRows').innerHTML=visible.length?visible.map(x=>`<tr tabindex="0" data-ticker="${esc(x.ticker)}"><td>${esc(x.ticker)}<span class="ticker-sub">USA: ${esc(x.usa||'NO APLICA')} · ${esc(x.sector)}</span></td><td>${usd(x.data?.price)}</td><td><span class="${x.data?.cross_up21?'sma21-up':x.data?.cross_down21?'sma21-down':'muted'}">${usd(x.data?.ma21)}</span><span class="ticker-sub">${esc(x.data?.sma21_state||'—')}</span></td><td>${fmt(x.data?.rsi14d)}</td><td>${x.data?.macd_hist_d==null?'—':fmt(x.data?.macd_hist_d)}</td><td><span title="${esc((x.data?.rank_penalty_reasons||[]).join(' · ')||'Sin penalizaciones')}">${barScore(x.data?.rank_score)}</span><span class="ticker-sub">${esc(x.candidate?.level||x.data?.rank_level||'')}</span></td><td>${fmt(x.data?.rvol20)}x</td><td>${eventHtml(x)}</td><td>${esc(x.data?.trend||'NO VERIFICADO')}</td><td>${badge(x.signal,x.tone)}</td></tr>`).join(''):'<tr><td colspan="10" style="padding:30px">No hay resultados para estos filtros.</td></tr>';
  $('assetRows').querySelectorAll('tr[data-ticker]').forEach(el=>{const act=()=>openDetails('asset',el.dataset.ticker);el.onclick=act;el.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act()}}});}
+function renderRebounds(){
+ const root=$('reboundRows');if(!root)return;
+ const rows=Array.isArray(dataset?.rebounds)?dataset.rebounds:[];
+ if(!rows.length){root.innerHTML='<tr><td colspan="10">No hay rebotes que superen TODOS los filtros y R:R >=2 en el corte vigente. No se fuerzan oportunidades.</td></tr>';return}
+ root.innerHTML=rows.slice(0,8).map(x=>`<tr>
+  <td><strong>${esc(x.cedear||x.ticker)}</strong><span class="ticker-sub">${esc(x.ticker)}</span></td>
+  <td>${fmt(x.drop_from_high_pct)}%</td><td>${fmt(x.rsi14)}</td>
+  <td>${fmt(x.distance_atr)} ATR</td>
+  <td><small>${esc(x.turn_signal)}</small><span class="ticker-sub">${esc(x.structure)}</span></td>
+  <td>${usd(x.target_usd)}<span class="ticker-sub">${esc(x.target_type)}</span></td>
+  <td>${usd(x.stop_usd)}<span class="ticker-sub">7 ruedas máximo</span></td>
+  <td><strong>${fmt(x.rr)}R</strong></td>
+  <td><small>${esc(x.earnings_status||'No verificado')}</small></td>
+  <td><span class="rebound-risk">EXPERIMENTAL · ALTO RIESGO</span></td>
+ </tr>`).join('');
+}
 function renderTop5(){
  const root=$('top5Cards');
  const arr=Array.isArray(dataset.top5)?dataset.top5:[];
@@ -206,8 +222,8 @@ async function load(){dataset=baseline();try{const r=await fetch('./data.json?re
      x.reasons=['Señal suspendida: falta una actualización reciente del mercado estadounidense. Revisar GitHub Actions y fecha de cierre USA.'];
    }
  }
- if(batchStale||j.assets.every(x=>x.data&&staleDate(x.data.date))){j.top5=[];}
- dataset=j;}catch(e){$('criticalBanner').textContent='Sin datos. Si abriste el archivo local, publicalo en GitHub Pages. Error de lectura: '+e.message;}fillFilters();renderHeader();renderTop5();renderAssets();renderSectors();renderTracked();}
+ if(batchStale||j.assets.every(x=>x.data&&staleDate(x.data.date))){j.top5=[];j.rebounds=[];}
+ dataset=j;}catch(e){$('criticalBanner').textContent='Sin datos. Si abriste el archivo local, publicalo en GitHub Pages. Error de lectura: '+e.message;}fillFilters();renderHeader();renderTop5();renderAssets();renderRebounds();renderSectors();renderTracked();}
 for(const el of document.querySelectorAll('.tab'))el.onclick=()=>setTab(el.dataset.tab);
 for(const id of ['searchInput','sectorFilter','signalFilter','sortFilter'])$(id).addEventListener(id==='searchInput'?'input':'change',renderAssets);
 $('modalClose').onclick=()=>$('detailModal').close();$('detailModal').addEventListener('click',e=>{if(e.target===$('detailModal'))$('detailModal').close()});
