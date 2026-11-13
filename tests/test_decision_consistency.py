@@ -53,6 +53,23 @@ class DecisionConsistencyTests(unittest.TestCase):
         self.assertEqual(audit_consistency([v]),[])
         v["signal"]="VIGILAR COMPRA · SCORE"
         self.assertTrue(audit_consistency([v]))
+    def test_legacy_watch_is_audited_not_mistaken_for_zero(self):
+        current=asset("OLD",row(64),decide(row(64),"FAVORABLE",18,True))
+        current["signal"]="VIGILAR COMPRA"  # etiqueta legacy que escapaba al audit
+        violations=audit_consistency([current])
+        self.assertTrue(any(x["reason"]=="opportunity_below_floor" for x in violations))
+        blocked=asset("X",row(92),decide(row(92),"FAVORABLE",18,True))
+        blocked["signal"]="VIGILAR COMPRA · MACRO"
+        blocked["vetoes"]=["PRECIO BAJO SMA200"]
+        self.assertTrue(any(x["reason"]=="opportunity_with_hard_veto"
+                            for x in audit_consistency([blocked])))
+
+    def test_workflow_distinguishes_production_from_proposed_audit(self):
+        source=(ROOT/"scripts/actualizar.py").read_text(encoding="utf-8")
+        self.assertIn("'production_consistency_violations':production_violations",source)
+        self.assertIn("'proposed_consistency_count':len(consistency_violations)",source)
+        self.assertIn("production_violations=audit_consistency(production_audit)",source)
+
     def test_random_rows_prove_invariants(self):
         rng=random.Random(4101);items=[]
         for i in range(1200):
