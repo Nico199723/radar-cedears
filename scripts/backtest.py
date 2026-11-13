@@ -87,27 +87,31 @@ def macro_history(spy: pd.DataFrame, qqq: pd.DataFrame, vix: pd.DataFrame) -> di
     return out
 
 
+
 def historical_decisions(frame: pd.DataFrame, macros: dict, start_date: str,
-                         variant: str = 'baseline', vix_by_day: dict | None = None) -> dict:
-    """Reutilizar EXACTAMENTE compute/get_signal de producción, con serie truncada en t."""
+                         variant: str = 'baseline', vix_by_day: dict | None = None,
+                         spy_close:pd.Series|None=None, qqq_close:pd.Series|None=None) -> dict:
+    """Actual vs unificado: decisión a cierre t, benchmarks hasta t (no lookahead)."""
     frame = normalize(frame)
     decisions = {}
-    for pos in range(240, len(frame)):
-        day = frame.index[pos]
-        if day.strftime("%Y-%m-%d") < start_date:
-            continue
-        if day not in macros:
-            continue
-        row = compute(frame.iloc[:pos + 1], close_time(day))
-        if row is None:
-            continue
-        signal, _, _ = get_signal(row, macros[day], True)
-        if variant == "prudente":
-            candidate, _, _ = cautious_signal(row,macros[day],
-                                    (vix_by_day or {}).get(day),True,signal)
-            if candidate == "COMPRA CON PRECAUCIÓN":
-                signal = candidate
-        decisions[day] = {"signal": signal, "stop": row["invalid_usd"]}
+    for pos in range(240,len(frame)):
+        day=frame.index[pos]
+        if day.strftime("%Y-%m-%d")<start_date or day not in macros:continue
+        row=compute(frame.iloc[:pos+1],close_time(day),
+                    spy_close=spy_close,qqq_close=qqq_close)
+        if row is None:continue
+        if variant=="unified":
+            from decision_engine import decide
+            signal=decide(row,macros[day],(vix_by_day or {}).get(day),True).signal
+        else:
+            signal,_,_=get_signal(row,macros[day],True)
+            if variant in ("prudente","production"):
+                # Reproducir el flujo de producción: get_signal -> excepción
+                # macro. Las vigilancias no son órdenes y no abren posiciones.
+                next_signal,_,_=cautious_signal(
+                    row,macros[day],(vix_by_day or {}).get(day),True,signal)
+                if next_signal!=signal:signal=next_signal
+        decisions[day]={"signal":signal,"stop":row["invalid_usd"]}
     return decisions
 
 
@@ -176,7 +180,14 @@ def max_drawdown(curve: pd.Series) -> float:
 
 def metrics(trades: list[Trade], curve: pd.Series) -> dict:
     rr = [x.net_r for x in trades if math.isfinite(x.net_r)]
+    max_streak=streak=0
+    for trade in trades:
+        if trade.net_return_pct<0:
+            streak+=1
+            max_streak=max(max_streak,streak)
+        else:streak=0
     return {
+        "peor_racha_perdedora":max_streak,
         "n_senales_ejecutadas": len(trades),
         "win_rate_pct": round(sum(x.net_return_pct > 0 for x in trades) / len(trades) * 100, 2) if trades else None,
         "r_promedio": round(float(np.mean(rr)), 4) if rr else None,
@@ -248,7 +259,7 @@ def main():
     p.add_argument("--tickers", default="AMZN,NVDA,MSFT,META,GOOGL,JPM,TGT,COPX,IREN,TQQQ",
                    help="Subyacentes USA USD separados por coma; no símbolos CEDEAR locales")
     p.add_argument("--years", type=int, choices=range(5, 11), metavar="[5..10]", default=10)
-    p.add_argument("--variant", choices=("baseline","prudente"), default="baseline")
+    p.add_argument("--variant", choices=("baseline","prudente","production","unified"), default="baseline")
     p.add_argument("--fee-bps", type=float, default=5.0)
     p.add_argument("--slippage-bps", type=float, default=10.0)
     p.add_argument("--out", default="backtest-out", help="Carpeta fuera de docs/")
@@ -263,16 +274,24 @@ def main():
         raise SystemExit("No hay macro completa SPY/QQQ/VIX; NO ejecutar señales de compra")
     macro = macro_history(*(frames[t] for t in required))
     vix_by_day = normalize(frames["^VIX"])["Close"].to_dict()
+    spy_close=normalize(frames["SPY"])["Close"]
+    qqq_close=normalize(frames["QQQ"])["Close"]
     start_date = (datetime.now(NY).date() - timedelta(days=int(args.years * 365.25))).isoformat()
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
     totals = []
+    all_signals = {}
     for symbol in tickers:
         if symbol not in frames:
             totals.append({"ticker": symbol, "estado": "SIN HISTÓRICO"})
             continue
         f = frames[symbol]
-        decisions = historical_decisions(f, macro, start_date,variant=args.variant,vix_by_day=vix_by_day)
+        decisions = historical_decisions(f,macro,start_date,variant=args.variant,
+                                          vix_by_day=vix_by_day,
+                                          spy_close=spy_close,qqq_close=qqq_close)
+        for decision in decisions.values():
+            label=decision["signal"]
+            all_signals[label]=all_signals.get(label,0)+1
         valid = f.loc[f.index >= pd.Timestamp(start_date)]
         trades, curve = simulate(valid, decisions, symbol, args.fee_bps, args.slippage_bps)
         row = {"ticker": symbol, "estado": "OK", "inicio":str(curve.index[0].date()),
@@ -294,10 +313,11 @@ def main():
             for trade in trades:
                 w.writerow(asdict(trade))
         print(f"{symbol}: {row['n_senales_ejecutadas']} trades, R medio {row['r_promedio']}, DD {row['max_drawdown_pct']}%")
-    report={"version":"macro-"+args.variant+"-comparacion-2026-11-12",
+    report={"version":"decision-"+args.variant+"-comparacion-2026-11-13",
             "as_of":datetime.now(NY).isoformat(),
             "source":"Yahoo Finance/yfinance OHLC ajustado USD; datos sujetos a revisión",
-            "variant":args.variant,"years_requested":args.years,"fee_bps_per_side":args.fee_bps,
+            "variant":args.variant,"signal_counts":all_signals,
+            "years_requested":args.years,"fee_bps_per_side":args.fee_bps,
             "slippage_bps_per_side":args.slippage_bps,
             "limitations":["sesgo supervivencia (universo actual)", "earnings NO aplicado en código actual",
                 "sin tramos 40/35/25", "sin CEDEAR ARS/CCL", "sin validación de Koncorde",

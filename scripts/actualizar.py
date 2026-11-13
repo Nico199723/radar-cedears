@@ -363,6 +363,26 @@ def main():
         checked=bool(sym and sym in earnings_dates)
         a["earnings"]=earnings_dates.get(sym) if checked else None
         a["earnings_status"]=event_label(a["earnings"],checked)
+    # Motor unificado en sombra: no cambiar señales operables sin informe
+    # antes/después. El audit corre SIEMPRE sobre cada fila propuesta.
+    from decision_engine import (decide,audit_consistency,top_five_by_decision,
+                                 RULES_VERSION as DECISION_RULES_VERSION)
+    proposal=[]
+    for item in assets:
+        val=item.get("data")
+        e=item.get("earnings")
+        decision=decide(val,macro,vixvalue,is_fresh(val),e).public()
+        item["decision_v2_preview"]=decision
+        if val is not None:
+            val["score_decision"]=val.get("rank_score")
+        proposal.append({"ticker":item["ticker"],"usa":item.get("usa"),
+                         "data":val,"score_decision":decision["score_decision"],
+                         "signal":decision["signal"],"vetoes":decision["vetoes"]})
+    consistency_violations=audit_consistency(proposal)
+    if consistency_violations:
+        raise RuntimeError("Auditoría de decisiones v2 falló: "+
+                           str(consistency_violations[:20]))
+    proposed_top5=top_five_by_decision(proposal)
     selection=top_five(assets,spy,macro)
     sectors=[]
     for sector,proxy in SECTORS.items():
@@ -392,6 +412,9 @@ def main():
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
           'rules_version':'1.6-score-espectro-candidatas-62-prioridad-75',
+          'staged_rules_version':DECISION_RULES_VERSION,
+          'consistency_violations':consistency_violations,
+          'decision_mode':'SHADOW · NO MODIFICA SEÑALES PUBLICADAS',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
           'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
@@ -401,7 +424,9 @@ def main():
           'note':'Score Oportunidad nuevo y continuo es informativo (SMA21/RSI/MACD/OBV). Vigilar desde 62/100; prioridad 75. La habilitación real sigue temporalmente con score antiguo rank_score_signal para no recalibrar compras sin backtest OOS. Dos verdes para comprar normal/prudente; track record simulado sin reiniciar. BYMA sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
-        'assets':assets,'sectors':sectors,'top5':selection,'risk_policy_paper':risk_policy(macro,vixvalue)
+        'assets':assets,'sectors':sectors,'top5':selection,
+        'top5_proposed':proposed_top5,
+        'risk_policy_paper':risk_policy(macro,vixvalue)
     }
     # Forward-paper: cada run restaura un ledger previo, nunca inventa fills del pasado.
     if spy is None or not is_fresh(spy):
