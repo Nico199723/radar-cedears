@@ -367,56 +367,64 @@ def main():
     # antes/después. El audit corre SIEMPRE sobre cada fila propuesta.
     from decision_engine import (decide,audit_consistency,top_five_by_decision,
                                  RULES_VERSION as DECISION_RULES_VERSION)
-    proposal=[]
+    # ACTIVACIÓN VERSIONADA: UN score (rank_score) y UN motor de señal.
+    # Conservamos señal vieja sólo como diagnóstico no operativo.
+    legacy_audit=[]
+    proposed=[]
     for item in assets:
         val=item.get("data")
-        e=item.get("earnings")
-        decision=decide(val,macro,vixvalue,is_fresh(val),e).public()
+        decision=decide(val,macro,vixvalue,is_fresh(val),item.get("earnings")).public()
+        legacy_audit.append({
+            "ticker":item["ticker"],"data":val,"score_decision":decision["score_decision"],
+            "signal":item["signal"],"vetoes":decision["vetoes"]})
+        item["legacy_signal_diagnostic"]=item["signal"]
         item["decision_v2_preview"]=decision
+        item["signal"],item["tone"]=decision["signal"],decision["tone"]
+        item["reasons"]=list(decision["reasons"])
+        item["vetoes"]=list(decision["vetoes"])
+        item["score_decision"]=decision["score_decision"]
+        item["candidate"]=buy_candidate(val,item["signal"],is_fresh(val))
         if val is not None:
-            val["score_decision"]=val.get("rank_score")
-        proposal.append({"ticker":item["ticker"],"usa":item.get("usa"),
+            val["score_decision"]=decision["score_decision"]
+        proposed.append({"ticker":item["ticker"],"usa":item.get("usa"),
                          "data":val,"score_decision":decision["score_decision"],
                          "signal":decision["signal"],"vetoes":decision["vetoes"]})
-    consistency_violations=audit_consistency(proposal)
+    legacy_violations=audit_consistency(legacy_audit)
+    consistency_violations=audit_consistency(proposed)
     if consistency_violations:
-        raise RuntimeError("Auditoría de decisiones v2 falló: "+
+        raise RuntimeError("Auditoría del motor ACTIVO falló: "+
                            str(consistency_violations[:20]))
-    # Medir también las contradicciones REALES del motor vigente, sin
-    # fingir que el cero del shadow representa al data.json operativo.
-    # Se exponen como diagnóstico hasta aprobar el cambio tras backtest.
-    production_audit=[]
-    for item in assets:
-        preview=item["decision_v2_preview"]
-        production_audit.append({
-            "ticker":item["ticker"],"usa":item.get("usa"),"data":item.get("data"),
-            "score_decision":preview["score_decision"],
-            "signal":item["signal"],"vetoes":preview["vetoes"]})
-    production_violations=audit_consistency(production_audit)
-    if production_violations:
-        logging.warning("Auditoría de señales VIGENTES: %d contradicciones "
-                        "(motor unificado aún no habilitado). Ejemplo: %s",
-                        len(production_violations),production_violations[:3])
-    proposed_top5=top_five_by_decision(proposal)
-    selection=top_five(assets,spy,macro)
+    proposed_top5=top_five_by_decision(proposed)
+    selection=top_five(assets,spy,macro,strict_score=True)
     sectors=[]
+    sector_audit=[]
     for sector,proxy in SECTORS.items():
         val=technical.get(proxy)
         fresh=is_fresh(val)
-        signal,tone,why=get_signal(val,macro,fresh)
-        if ENABLE_CAUTION_ENTRIES and val:
-            candidate, candidate_tone, note=cautious_signal(val,macro,vixvalue,fresh,signal)
-            if candidate!=signal:
-                signal,tone=candidate,candidate_tone
-                if note:why=why+[note]
-        candidate=buy_candidate(val,signal,fresh)
-        if candidate["eligible"] and signal in ("ESPERAR","ESPERAR MACRO","MANTENER / ESPERAR"):
-            signal,tone="VIGILAR COMPRA · SCORE","watch"
-            why=why+[f"Score Oportunidad {val['rank_score']:.1f}: candidato para revisar; falta setup confirmado."]
-        elif signal.startswith("VIGILAR"):
-            tone="watch"
-        sectors.append({'sector':sector,'proxy':proxy,'signal':signal,'tone':tone,
-                        'candidate':candidate,'reasons':why,'data':val})
+        decision=decide(val,macro,vixvalue,fresh).public()
+        if val is not None:
+            val["score_decision"]=decision["score_decision"]
+        candidate=buy_candidate(val,decision["signal"],fresh)
+        sectors.append({'sector':sector,'proxy':proxy,
+                        'signal':decision["signal"],'tone':decision["tone"],
+                        'candidate':candidate,'reasons':list(decision["reasons"]),
+                        'vetoes':list(decision["vetoes"]),
+                        'score_decision':decision["score_decision"],'data':val})
+        sector_audit.append({"ticker":proxy,"data":val,
+                             "score_decision":decision["score_decision"],
+                             "signal":decision["signal"],"vetoes":decision["vetoes"]})
+    sector_violations=audit_consistency(sector_audit)
+    if sector_violations:
+        raise RuntimeError("Auditoría sectorial ACTIVA falló: "+
+                           str(sector_violations[:20]))
+    # Afirmación verificable ANTES de escribir el data.json público.
+    production_violations=audit_consistency([
+        {"ticker":a["ticker"],"data":a.get("data"),"signal":a["signal"],
+         "score_decision":a["score_decision"],"vetoes":a["vetoes"]}
+        for a in assets])
+    if production_violations:
+        raise RuntimeError("Publicación bloqueada por violaciones reales: "+
+                           str(production_violations[:20]))
     logging.info("Régimen %s; VIX=%s; COMPRA CON PRECAUCIÓN: %d activos / %d sectores; VIGILAR COMPRA · MACRO: %d activos",
                  macro,vixvalue,
                  sum(a['signal']=="COMPRA CON PRECAUCIÓN" for a in assets),
@@ -426,20 +434,22 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'1.6-score-espectro-candidatas-62-prioridad-75',
+          'rules_version':'2.0-unified-decision-active',
           'staged_rules_version':DECISION_RULES_VERSION,
           'consistency_violations':consistency_violations,
           'production_consistency_violations':production_violations,
+          'sectors_consistency_violations':sector_violations,
+          'legacy_consistency_violations_diagnostic':legacy_violations,
           'production_consistency_count':len(production_violations),
           'proposed_consistency_count':len(consistency_violations),
-          'decision_mode':'SHADOW · NO MODIFICA SEÑALES PUBLICADAS',
+          'decision_mode':'UNIFIED ACTIVE · SCORE DE DECISIÓN ÚNICO',
           'paper_version':PAPER_VERSION,
           'earnings_coverage':earnings_coverage,
           'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
                                  for label in sorted({a['signal'] for a in assets})},
           'sector_signal_counts':{label:sum(a['signal']==label for a in sectors)
                                   for label in sorted({a['signal'] for a in sectors})},
-          'note':'Score Oportunidad nuevo y continuo es informativo (SMA21/RSI/MACD/OBV). Vigilar desde 62/100; prioridad 75. La habilitación real sigue temporalmente con score antiguo rank_score_signal para no recalibrar compras sin backtest OOS. Dos verdes para comprar normal/prudente; track record simulado sin reiniciar. BYMA sin validar.'},
+          'note':'Score de decisión único = rank_score visible 0–100. Comprar desde 70 con filtros sin vetos; >=75 permite precaución sin gatillo del mismo día si estructura sana. Scores técnico y heredado son diagnósticos y NO habilitan órdenes. Macro bajo SMA50 reduce tamaño, no veto general. Auditoría de señales y sectores = 0 obligatoria. Estrategia versionada, A/B 5 años publicado; no es asesoramiento ni datos BYMA validados.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
         'assets':assets,'sectors':sectors,'top5':selection,
