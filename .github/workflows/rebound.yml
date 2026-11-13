@@ -1,0 +1,45 @@
+name: Backtest rebotes experimentales (no publicar ni alterar ledger)
+on:
+  pull_request:
+    paths:
+      - "scripts/rebound.py"
+      - "scripts/backtest_rebound.py"
+      - "tests/test_rebound.py"
+      - ".github/workflows/rebound.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+  mercado:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Comparar rebote contra RSI menor a 30, cierre t / open t+1
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then YEARS=10; else YEARS=5; fi
+          python scripts/backtest_rebound.py --years "$YEARS" --out backtest-out/rebound --data-cache backtest-out/rebound-market
+          cat backtest-out/rebound/comparison.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publicar informe histórico como artifact (no Pages, no commits)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rebound-experimental-comparison
+          path: |
+            backtest-out/rebound/
+            backtest-out/rebound-market/manifest.json
+          retention-days: 30

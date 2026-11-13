@@ -363,6 +363,10 @@ def main():
         checked=bool(sym and sym in earnings_dates)
         a["earnings"]=earnings_dates.get(sym) if checked else None
         a["earnings_status"]=event_label(a["earnings"],checked)
+    # Radar de rebotes aislado: jamás mezcla score ni compra del screener
+    # principal, y PAPER_REBOUND permanece apagado por defecto.
+    from rebound import scan_rebounds, RULES_VERSION as REBOUND_RULES_VERSION
+    rebounds=scan_rebounds(catalog,frames,earnings_dates,now,technical=technical)
     selection=top_five(assets,spy,macro)
     sectors=[]
     for sector,proxy in SECTORS.items():
@@ -393,6 +397,9 @@ def main():
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
           'rules_version':'1.6-score-espectro-candidatas-62-prioridad-75',
           'paper_version':PAPER_VERSION,
+          'rebound_rules_version':REBOUND_RULES_VERSION,
+          'rebound_status':'EXPERIMENTAL · PAPER REBOUND DESACTIVADO',
+          'paper_rebound':False,
           'earnings_coverage':earnings_coverage,
           'asset_signal_counts':{label:sum(a['signal']==label for a in assets)
                                  for label in sorted({a['signal'] for a in assets})},
@@ -401,7 +408,8 @@ def main():
           'note':'Score Oportunidad nuevo y continuo es informativo (SMA21/RSI/MACD/OBV). Vigilar desde 62/100; prioridad 75. La habilitación real sigue temporalmente con score antiguo rank_score_signal para no recalibrar compras sin backtest OOS. Dos verdes para comprar normal/prudente; track record simulado sin reiniciar. BYMA sin validar.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
-        'assets':assets,'sectors':sectors,'top5':selection,'risk_policy_paper':risk_policy(macro,vixvalue)
+        'assets':assets,'sectors':sectors,'top5':selection,
+        'rebounds':rebounds,'risk_policy_paper':risk_policy(macro,vixvalue)
     }
     # Forward-paper: cada run restaura un ledger previo, nunca inventa fills del pasado.
     if spy is None or not is_fresh(spy):
