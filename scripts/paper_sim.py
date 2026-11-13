@@ -232,11 +232,14 @@ def equity_at(s:dict, frames:dict, day:str)->tuple[float,list[str]]:
             hist=f.loc[:day,"Close"].dropna()
         else:
             hist=pd.Series(dtype=float)
-        if len(hist):
+        prior_day=p.get("last_mark_day")
+        if len(hist) and (prior_day is None or
+                          str(hist.index[-1].date())>=prior_day):
             px=float(hist.iloc[-1])
             p["last_mark"]=px
             p["last_mark_day"]=str(hist.index[-1].date())
         else:
+            # No sobrescribir último mark con precio más viejo descargado.
             px=p.get("last_mark")
         if px is None:
             pending.append(usa)
@@ -250,6 +253,10 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
                    macro:str, vix:float|None, latest_day:str)->dict:
     """Procesa sólo ruedas completas nuevas; no reconstruye operaciones del pasado."""
     check_ledger(s)
+    if latest_day<s["last_session"]:
+        # Evento de Yahoo: se publicó un cierre más antiguo que el último
+        # ledger válido. Nunca reabrir, vender, crear órdenes ni volver a valuar.
+        return s
     spy=frames.get("SPY")
     if spy is None:raise ValueError("No hay SPY para calendario de sesiones")
     days=[str(x.date()) for x in session_frame(spy).index
