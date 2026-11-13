@@ -8,7 +8,7 @@ import math
 from dataclasses import dataclass
 from collections import Counter
 
-RULES_VERSION="2.0-unified-decision-shadow"
+RULES_VERSION="2.0-unified-decision-active"
 BUY_FLOOR=70.0
 PRIORITY_FLOOR=75.0
 REDUCE_FLOOR=35.0

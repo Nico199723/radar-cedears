@@ -196,6 +196,18 @@ def evaluate_entry(a:dict, market:str, vix:float|None) -> tuple[bool,str]:
         return False,"BALANCE EN 7 DÍAS"
     if a.get("signal","").startswith(("SALIR","REDUCIR","DATOS","SIN")):
         return False,""
+    if a.get("decision_v2_preview") is not None:
+        # Sólo para los snapshots nuevos: el ledger histórico conserva sus
+        # fills; las nuevas órdenes usan exactamente el motor de la web.
+        from decision_engine import decide, BUY_SIGNALS
+        current=decide(d,market,vix,True,a.get("earnings"))
+        expected=a.get("signal")
+        if (current.signal not in BUY_SIGNALS or
+            current.signal!=expected or current.vetoes or
+            current.score_decision is None or current.score_decision<70):
+            return False,"SEÑAL UNIFICADA SIN COMPRA VÁLIDA"
+        return True,"SCORE ÚNICO / "+current.signal
+
     if market!="FAVORABLE":
         # Revalidar TODO el setup al cierre, nunca confiar sólo en una etiqueta.
         from radar_features import cautious_signal
@@ -381,29 +393,33 @@ def process_ledger(s:dict, frames:dict[str,pd.DataFrame], assets:list[dict],
                 if allowed:
                     candidates.append((d.get("rank_score") or 0,
                                        bool(d.get("cross_up21")),a,reason))
-        candidates.sort(key=lambda x:(x[1],x[0]),reverse=True)
+        candidates.sort(key=lambda x:(x[0],x[2].get("ticker","")),reverse=True)
         open_syms=set(s["positions"])|{o["usa"] for o in s["orders"]}
         sector_slots={}
         for p in s["positions"].values():
             sector_slots[p["sector"]]=sector_slots.get(p["sector"],0)+1
         for _,_,a,reason in candidates:
             usa=a["usa"]
-            if usa in open_syms or len(open_syms)>=policy["max_positions"]:
+            caution=a.get("signal")=="COMPRA CON PRECAUCIÓN"
+            strict_slots=min(policy["max_positions"],2) if caution else policy["max_positions"]
+            strict_sector=min(policy["max_per_sector"],1) if caution else policy["max_per_sector"]
+            if usa in open_syms or len(open_syms)>=strict_slots:
                 continue
             sector=a["sector"]
-            if sector_slots.get(sector,0)>=policy["max_per_sector"]:continue
+            if sector_slots.get(sector,0)>=strict_sector:continue
             leveraged=usa in {"TQQQ","SQQQ","SPXL","SOXL","SOXS","UPRO","SPXU"}
-            budget=min(policy["max_position_usd"],60 if policy["mode"]=="PRUDENTE" else 120) if leveraged else policy["max_position_usd"]
-            reserve=max(policy["reserve_usd"],1600 if policy["mode"]=="PRUDENTE" else 1200) if leveraged else policy["reserve_usd"]
-            stop=(.05 if policy["mode"]=="PRUDENTE" else .06) if leveraged else policy["stop_pct"]/100
+            prudent=policy["mode"]=="PRUDENTE" or caution
+            budget=min(policy["max_position_usd"],60 if prudent else 120) if leveraged else min(policy["max_position_usd"],120) if prudent else policy["max_position_usd"]
+            reserve=max(policy["reserve_usd"],1600 if prudent else 1200) if leveraged else max(policy["reserve_usd"],1400) if prudent else policy["reserve_usd"]
+            stop=(.05 if prudent else .06) if leveraged else (.06 if prudent else policy["stop_pct"]/100)
             if s["cash"]-reserve<budget*TRANCHES[0]:continue
             s["orders"].append({
                 "side":"BUY","usa":usa,"ticker":a["ticker"],
                 "sector":sector,"tranche":1,"issued_day":latest_day,
                 "reason":reason,"budget":budget,"reserve_usd":reserve,
-                "stop_pct":stop,"risk_mode":policy["mode"]+(" / ETF APALANCADO" if leveraged else ""),
-                "max_positions":policy["max_positions"],
-                "max_per_sector":policy["max_per_sector"],
+                "stop_pct":stop,"risk_mode":("PRUDENTE" if prudent else policy["mode"])+(" / ETF APALANCADO" if leveraged else ""),
+                "max_positions":strict_slots,
+                "max_per_sector":strict_sector,
             })
             open_syms.add(usa)
             sector_slots[sector]=sector_slots.get(sector,0)+1

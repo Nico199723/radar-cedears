@@ -478,7 +478,8 @@ def buy_candidate(row: dict | None, signal: str, fresh: bool) -> dict:
     return out
 
 
-def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) -> list[dict]:
+def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5,
+             strict_score: bool = False) -> list[dict]:
     """Top para estudio, NO cinco compras forzadas. Diversifica sectores."""
     candidates=[]
     spy_roc=spy.get("roc20") if spy else None
@@ -486,9 +487,13 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
         d=a.get("data")
         if not d or not a.get("usa"):
             continue
+        if strict_score and (a.get("vetoes") or a.get("signal") not in (
+                "COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN",
+                "VIGILAR COMPRA · GATILLO","VIGILAR COMPRA · SCORE")):
+            continue
         rank=d.get("rank_score")
         dollar=d.get("dollar_volume20")
-        if rank is None or rank<MIN_OPTION_SCORE or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
+        if rank is None or rank<(70 if strict_score else MIN_OPTION_SCORE) or not d.get("rs_verified") or dollar is None or dollar<5_000_000:
             continue
         if d.get("price",0)<=d.get("ma200",float("inf")):
             continue
@@ -508,7 +513,7 @@ def top_five(assets: list[dict], spy: dict | None, market: str, limit: int = 5) 
             priority -= 8*(1-math.exp(-max(0.,d["stretch_atr20"]-1.2)))
         if d.get("rvol20") is not None and d["rvol20"]<0.65:
             priority -= 3*(1-d["rvol20"]/.65)
-        candidates.append((priority,a,relative))
+        candidates.append((rank if strict_score else priority,a,relative))
     candidates.sort(key=lambda v:(v[0],v[1]["data"]["rank_score"]),reverse=True)
     selection=[]
     counts={}

@@ -12,9 +12,9 @@ from radar_features import cautious_signal
 class SectorMacroConsistency(unittest.TestCase):
     def test_sector_proxy_uses_cautious_filter_after_original_signal(self):
         source=(ROOT/"scripts/actualizar.py").read_text(encoding="utf-8")
-        sector=source.split("    sectors=[]\n    for sector,proxy in SECTORS.items():",1)[1].split("    result={",1)[0]
-        self.assertIn("signal,tone,why=get_signal(val,macro,fresh)",sector)
-        self.assertIn("cautious_signal(val,macro,vixvalue,fresh,signal)",sector)
+        sector=source.split("    sector_audit=[]\n    for sector,proxy in SECTORS.items():",1)[1].split("    logging.info(",1)[0]
+        self.assertIn("decision=decide(val,macro,vixvalue,fresh).public()",sector)
+        self.assertIn("'signal':decision[\"signal\"]",sector)
         self.assertIn("sectors.append(",sector)
         self.assertIn("'sector_signal_counts':",source)
 

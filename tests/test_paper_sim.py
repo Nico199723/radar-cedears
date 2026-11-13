@@ -107,6 +107,7 @@ class PaperTests(unittest.TestCase):
         assets=[]
         for ix in range(7):
             x=asset(self.days[1],"A"+str(ix),sector="Sector "+str(ix))
+            x["signal"]="COMPRA CONDICIONAL"  # escenario de size NORMAL
             assets.append(x)
         frames={"SPY":self.market}
         for x in assets:frames[x["usa"]]=self.stock
