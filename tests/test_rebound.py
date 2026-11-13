@@ -107,6 +107,26 @@ class ReboundTests(unittest.TestCase):
         sig={idx[0]:{"entry_ref":100,"stop_usd":95,"target_usd":111,"rr":2.2}}
         trades,_=simulate(f,sig,"AAPL",fee_bps=0,slip_bps=0)
         self.assertEqual(trades[0]["reason"],"STOP MISMA VELA")
+    def test_time_stop_fills_at_open_before_intraday_high_target(self):
+        # Tras siete ruedas sin salida, la siguiente apertura debe cerrar
+        # por tiempo. No puede mirar un máximo futuro de la misma rueda.
+        dates=pd.bdate_range("2026-01-01",periods=12)
+        opens=[100.]*12
+        highs=[101.]*12
+        lows=[99.]*12
+        closes=[100.]*12
+        highs[9]=120.  # Objetivo tocado DESPUÉS de la apertura de salida temporal
+        frame=pd.DataFrame({"Open":opens,"High":highs,"Low":lows,
+                            "Close":closes,"Volume":[2_000_000]*12},index=dates)
+        signal={dates[0]:{"entry_ref":100,"stop_usd":95,
+                          "target_usd":111,"rr":2.2}}
+        trades,_=simulate(frame,signal,"TEST",fee_bps=0,slip_bps=0,
+                          time_stop_sessions=7)
+        self.assertEqual(len(trades),1)
+        self.assertEqual(trades[0]["reason"],"TIEMPO")
+        self.assertEqual(trades[0]["exit_date"],str(dates[9].date()))
+        self.assertEqual(trades[0]["exit"],100.)
+
     def test_ui_is_experimental_distinct(self):
         html=(ROOT/"docs/index.html").read_text()
         js=(ROOT/"docs/app.js").read_text()
