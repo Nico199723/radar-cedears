@@ -95,3 +95,45 @@ tests/test_radar.py               # tests offline
 `HECHO` = último cierre USD y métricas descargadas; `INTERPRETACIÓN` = score y reglas técnicas; `ESCENARIO` = nivel de entrada/invalidez/objetivo teórico. **No hay confirmación 4H**, ni Koncorde, ni verificación automatizada de fundamentales, ratios o noticias. La etiqueta «SALIR / EVITAR» no conoce tu precio promedio; vos definís la ejecución y tamaño. Para opciones GGAL rigen reglas independientes y este sitio no opera opciones.
 
 **Fuentes útiles:** https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site · https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax · https://www.byma.com.ar/productos/productos-financieros/cedears
+
+## Motor espectral v3 — candidato SIN ACTIVAR
+
+La variante A queda congelada en `scripts/decision_engine_legacy.py`. El dispatch de
+`decision_engine.py` conserva A por defecto; B se invoca con `mode="spectrum"`
+mediante `spectrum_snapshot.apply_asset/apply_snapshot`. La referencia adjunta está
+integrada en `lectura_espectral.py`; las curvas, bandas, pesos y tamaños se configuran
+en `spectrum_config.py`. No cambiar `ACTIVE_ENGINE` para desplegar: la promoción
+requiere migrar explícitamente el pipeline y validar el ledger paper por separado.
+
+Cada ejecución de `actualizar.py` produce además un candidato independiente en
+`backtest-out/spectrum-preview.json`. No reemplaza `docs/data.json` ni las señales
+del paper vigente. Para una revisión local, copiar `docs/` a una carpeta temporal,
+reemplazar allí `data.json` por el candidato y servir esa carpeta por HTTP.
+
+B usa `rank_score` como único score visible; el deterioro continuo, también visible,
+decide REDUCIR/SALIR según la referencia. La macro cambia como máximo ±4 puntos;
+VIX ≥30 o macro incompleta se normalizan a neutral y tamaño reducido. Histórico
+insuficiente y liquidez <USD 1M son los únicos frenos de lectura. La caducidad de
+36 horas del frontend sigue siendo un control de vigencia, no una opinión técnica.
+Top 5: mayor score, máximo 2 por sector cuando hay alternativas y cupo relajado
+si hace falta. Los candidatos bajo precaución y los casos de deterioro se etiquetan;
+cinco resultados no implican cinco compras.
+
+Diferencias necesarias frente al adjunto: semanas cerradas igual que `compute`, RSI
+plano=50, saneamiento de opcionales no finitos, macro incompleta/estresada normalizada,
+y clasificación sobre el mismo score redondeado publicado. Los 15 tests del adjunto
+se conservan sin cambios; la compatibilidad legacy permite mantener los 126 previos.
+
+Reproducir el A/B (misma caché inmutable, t+1, fee 5bps + slippage 10bps por lado):
+
+```sh
+python -m unittest discover -s tests -v
+node --check docs/app.js
+python scripts/backtest_spectrum.py --cache backtest-out/market --out backtest-out/spectrum
+python scripts/calibrate_spectrum.py --cache backtest-out/market --out backtest-out/spectrum
+```
+
+El workflow `spectrum.yml` publica tabla en Actions y artefactos (sin commits de
+cotizaciones). La muestra inicial son 10 instrumentos, cinco años; DD y peor racha
+son individuales, no de cartera. El sizing y earnings históricos no están validados
+por este simulador; no promover sólo por aumentar el número de señales.
