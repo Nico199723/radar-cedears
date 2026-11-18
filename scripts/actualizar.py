@@ -485,6 +485,12 @@ def main():
     state_tmp.replace(state_path)
     public_path=ROOT/"docs"/"paper.json"
     public_path.write_text(json.dumps(paper_public,ensure_ascii=False,allow_nan=False),encoding="utf-8")
+    # Snapshot candidato revisable, aislado del motor y ledger activos.
+    from spectrum_snapshot import apply_snapshot
+    spectrum_preview=apply_snapshot(result,frames,now)
+    preview_path=ROOT/'backtest-out'/'spectrum-preview.json'
+    preview_path.parent.mkdir(parents=True,exist_ok=True)
+    preview_path.write_text(json.dumps(spectrum_preview,ensure_ascii=False,allow_nan=False),encoding='utf-8')
     OUT.parent.mkdir(parents=True,exist_ok=True)
     tmp=OUT.with_suffix('.json.tmp')
     tmp.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False),encoding='utf-8')
