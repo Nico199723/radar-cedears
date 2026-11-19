@@ -76,7 +76,7 @@ class UnifiedProductionTests(unittest.TestCase):
 
     def test_main_generated_data_audited_before_writing(self):
         script=(ROOT/"scripts/actualizar.py").read_text(encoding="utf-8")
-        self.assertIn("selection=top_five(assets,spy,macro,strict_score=True)",script)
+        self.assertIn("selection=ranked_watchlist(assets)",script)
         self.assertIn("production_violations=audit_consistency(",script)
         self.assertIn("if production_violations:",script)
         self.assertIn("'decision_mode':'UNIFIED ACTIVE",script)

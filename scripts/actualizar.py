@@ -411,7 +411,8 @@ def main():
     from rebound import scan_rebounds, RULES_VERSION as REBOUND_RULES_VERSION
     rebounds=scan_rebounds(catalog,frames,earnings_dates,now,technical=technical)
     proposed_top5=top_five_by_decision(proposed)
-    selection=top_five(assets,spy,macro,strict_score=True)
+    from watch_ranking import ranked_watchlist
+    selection=ranked_watchlist(assets)
     sectors=[]
     sector_audit=[]
     for sector,proxy in SECTORS.items():
