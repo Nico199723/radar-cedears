@@ -26,7 +26,8 @@ class UIUpgradeTests(unittest.TestCase):
         self.assertIn("<th>Balance</th>",self.html)
         self.assertIn('eventHtml(x)',self.js)
         self.assertIn("Fecha no verificada",self.js)
-        self.assertIn("Fuente: Yahoo Finance",self.js)
+        self.assertIn("Fuente: ",self.js)
+        self.assertIn("Nasdaq y Yahoo Finance",self.js)
         self.assertIn(".balance-alert.urgent",self.css)
 
     def test_stale_data_blocks_top5_too(self):

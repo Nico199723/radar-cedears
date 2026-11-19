@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from radar_features import volume_profile, ranking_score, cautious_signal, top_five, sma21_priority, ranking_stock_21, relative_strength, risk_policy, buy_candidate, legacy_entry_rank
-from earnings import earnings_for_candidates, event_label
+from earnings_calendar import earnings_for_universe, balance_label, norm_symbol
 from paper_sim import process_ledger, public_summary, session_frame, VERSION as PAPER_VERSION
 from paper_store import load_or_initialize
 
@@ -45,6 +45,14 @@ SECTORS = {
     "Salud y biotecnología": "XLV", "Semiconductores": "SMH",
     "Software y cloud": "IGV", "Tecnología e internet": "XLK",
     "Telecomunicaciones": "IYZ", "Turismo y viajes": "JETS",
+}
+
+
+ETF_SYMBOLS=set(SECTORS.values()) | {
+    "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
+    "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
+    "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
+    "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
 }
 
 
@@ -287,12 +295,7 @@ def main():
     frames=get_prices(symbols,now)
     # Catálogo curado: excluimos ETFs y proxies frecuentes de la ponderación accionaria.
     # La clasificación es orientativa; no sustituye confirmación del tipo de instrumento.
-    etfs=set(SECTORS.values()) | {
-        "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
-        "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
-        "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
-        "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
-    }
+    etfs=ETF_SYMBOLS
     nonstocks={x["subyacente_usa"] for x in catalog if x["sector"]=="Índices y ETFs"}
     spy_close=last_complete_daily(frames["SPY"],now)["Close"] if "SPY" in frames else None
     qqq_close=last_complete_daily(frames["QQQ"],now)["Close"] if "QQQ" in frames else None
@@ -354,15 +357,24 @@ def main():
             'cedear_verificado':False, # Catálogo curado NO sustituye PDF oficial BYMA
             'estado_instrumento':'PENDIENTE VALIDAR RATIO Y LISTADO BYMA',
             'signal':signal,'tone':tone,'reasons':why,'data':val,
-            'verificacion':item['observacion']
+            'verificacion':item['observacion'],
+            'earnings_is_etf':bool(us and (us in etfs or us in nonstocks))
         })
-    # Calendario opcional y parcial: no afirmar "sin balance" cuando falla Yahoo.
-    earnings_dates, earnings_coverage = earnings_for_candidates(assets,now.astimezone(NY_TZ).date())
+    # Calendario de balances de TODO el universo: Nasdaq por día (cobertura masiva) + Yahoo por
+    # ticker sólo de respaldo + caché entre corridas. Fecha indicativa; "sin dato" nunca se
+    # presenta como "sin balance".
+    _cal,earnings_coverage=earnings_for_universe(
+        assets,now.astimezone(NY_TZ).date(),cache_path=ROOT/".cache"/"earnings.json",
+        priority={x["usa"] for x in assets if x.get("usa") and ((x.get("data") or {}).get("score") or 0)>=65})
+    earnings_dates={x["usa"]:_cal[norm_symbol(x["usa"])] for x in assets
+                    if x.get("usa") and norm_symbol(x["usa"]) in _cal}
     for a in assets:
         sym=a["usa"]
         checked=bool(sym and sym in earnings_dates)
+        kind=(a.get("data") or {}).get("asset_kind")
+        is_etf=a.get("earnings_is_etf",False) or a.get("sector")=="Índices y ETFs" or (kind is not None and kind!="ACCION")
         a["earnings"]=earnings_dates.get(sym) if checked else None
-        a["earnings_status"]=event_label(a["earnings"],checked)
+        a["earnings_status"]=balance_label(a["earnings"],checked,is_etf)
     # Motor unificado en sombra: no cambiar señales operables sin informe
     # antes/después. El audit corre SIEMPRE sobre cada fila propuesta.
     from decision_engine import (decide,audit_consistency,top_five_by_decision,

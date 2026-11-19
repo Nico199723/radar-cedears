@@ -49,6 +49,13 @@ jobs:
           cache: pip
       - name: Instalar dependencias
         run: pip install -r requirements.txt
+      - name: Restaurar cache de fechas de balances
+        uses: actions/cache@v4
+        with:
+          path: .cache/earnings.json
+          key: earnings-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            earnings-v1-
       - name: Validar configuracion
         run: python scripts/actualizar.py --check
       - name: Tests del motor sin conexión
