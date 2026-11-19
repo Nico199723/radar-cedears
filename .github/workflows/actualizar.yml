@@ -17,9 +17,8 @@ on:
       - "requirements.txt"
       - ".github/workflows/actualizar.yml"
   schedule:
-    - cron: "0 13 * * *"
-      timezone: "America/Argentina/Buenos_Aires"
-    - cron: "5 18 * * *"
+    # Cada hora, de 10:30 a 18:30 inclusive, todos los días (hora argentina).
+    - cron: "30 10-18 * * *"
       timezone: "America/Argentina/Buenos_Aires"
 
 permissions:
