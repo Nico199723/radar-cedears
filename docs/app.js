@@ -9,13 +9,28 @@ const fmt=v=>(v==null||!Number.isFinite(Number(v)))?'—':Number(v).toLocaleStri
 const tone=t=>(['up','caution','watch','down','wait','hold','neutral'].includes(t)?t:'neutral');
 const signalLabel=s=>s==='MANTENER / ESPERAR'||s==='ESPERAR'?'HOLD / ESPERAR':s==='ESPERAR MACRO'?'HOLD / ESPERAR · MACRO':s;
 const badge=(s,t)=>{const kind=s==='COMPRA CONDICIONAL'?'up':s==='COMPRA CON PRECAUCIÓN'?'caution':String(s||'').startsWith('VIGILAR COMPRA')?'watch':tone(t);return `<span class="pill ${kind}">${esc(signalLabel(s||'SIN DATOS'))}</span>`;};
+const upcomingEarnings=x=>{
+ const e=x?.earnings;if(!e?.date||!/^\d{4}-\d{2}-\d{2}$/.test(e.date))return null;
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const timestamp=Date.parse(e.date+'T00:00:00Z');
+ if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString().slice(0,10)!==e.date)return null;
+ const n=Math.round((timestamp-Date.parse(today+'T00:00:00Z'))/86400000);
+ return n>=0?{...e,days_until:n}:null;
+};
 const eventHtml=x=>{
- const e=x?.earnings, n=e?.days_until;
- if(typeof n==='number'&&n>=0&&n<=14){
-   const urgent=n<=7;
-   return `<span class="balance-alert ${urgent?'urgent':'soon'}" title="Fecha indicativa Yahoo, verificar en IR">⚠ Balance ${n===0?'HOY':'en '+n+'d'}</span>`;
+ const e=upcomingEarnings(x), n=e?.days_until, st=String(x?.earnings_status||dataset?.assets?.find(a=>a.ticker===x?.ticker)?.earnings_status||'');
+ if(typeof n==='number'&&n>=0){
+   const when=e.time_label?' · '+e.time_label:'';
+   const old=e.stale?' · dato de caché de '+e.cache_age_days+' días':'';
+   const title=esc(e.date+when+' — fecha indicativa ('+(e.source||'calendario gratuito')+old+'); verificar en relaciones con inversores');
+   if(n<=14){
+     return `<span class="balance-alert ${n<=7?'urgent':'soon'}" title="${title}">⚠ ${esc(day(e.date))} · ${n===0?'HOY':'en '+n+'d'}${e.time==='BMO'?' · AM':e.time==='AMC'?' · PM':''}</span>`;
+   }
+   return `<span class="muted" title="${title}">${esc(day(e.date))}</span>`;
  }
- return '<span class="muted" title="Fecha no verificada o fuera de 14 días">—</span>';
+ if(st.startsWith('ETF')) return '<span class="muted" title="Los ETF no publican balances">ETF</span>';
+ if(st.startsWith('SIN FECHA')) return '<span class="muted" title="Consultado: sin fecha futura verificable en las fuentes disponibles; revisar en relaciones con inversores">s/f</span>';
+ return '<span class="muted" title="Fecha no verificada: no consultada en esta corrida">—</span>';
 };
 const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=72?'good':v<35?'bad':''}">${esc(v)}</span>`;
 const day=(s)=>{if(!s)return '—';try{return new Date(s+'T12:00:00').toLocaleDateString('es-AR')}catch(e){return s}};
@@ -34,7 +49,7 @@ function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];cons
  $('buyCount').textContent=ready;$('buyCaption').textContent=watch+' candidatas en vigilancia (no son compras)';$('assetCount').textContent=m.universe_size||a.length;
  $('mappedCount').textContent=(m.mapped_us||0)+' con subyacente USA candidato';$('coverageCount').textContent=generated?fmt(coverage)+'%':'Sin datos';
  $('heroLast').textContent=generated?'Último procesamiento: '+new Date(m.generated_at_ar).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}):'Pendiente de primer corte';
- $('footerSource').textContent=(m.source||'Sin fuente')+' · '+(m.generated_at_ar?'corte '+new Date(m.generated_at_ar).toLocaleString('es-AR'):'sin datos');
+ const ec=m.earnings_coverage||{};$('footerSource').textContent=(m.source||'Sin fuente')+' · '+(m.generated_at_ar?'corte '+new Date(m.generated_at_ar).toLocaleString('es-AR'):'sin datos')+(ec.stocks?' · balances con fecha: '+ec.with_date+'/'+ec.stocks:'');
  $('liveIndicator').innerHTML=generated&&fresh?'<i style="background:#2bd5bc"></i>Última ejecución registrada':'<i></i>Datos pendientes';
  $('trackedCount').textContent=tracked.size;
 }
@@ -90,8 +105,8 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  let plan='No hay gatillo automático confirmado. Esperar confluencia diaria/4H y validación del mercado.';
  if(group(x.signal)==='compra')plan='Entrada eventual en 3 tramos 40% / 35% / 25%, sólo tras confirmar reacción, volumen y concentración de cartera.';
  if(x.signal==='COMPRA CON PRECAUCIÓN')plan='Macro adverso: NO impide operar con fuerza propia. Papel simulado hasta US$ 120, reserva del 70%, stop de referencia 6% y máximo 2 posiciones; primer tramo del 40% y los restantes sólo con confirmación. Los gaps pueden superar el stop.';
- const earnings=x.earnings||null;
- const balanceInfo=isAsset?'<div class="detail-note"><strong>Próximo balance:</strong> '+(earnings ? esc(day(earnings.date)+' (dentro de '+earnings.days_until+' días) — '+earnings.status) : esc(x.earnings_status||'Fecha sin verificar'))+'. Fuente: Yahoo Finance (fecha indicativa, contrastar en IR). No es un bloqueo automático.</div>':'';
+ const earnings=upcomingEarnings(x);
+ const balanceInfo=isAsset?'<div class="detail-note"><strong>Próximo balance:</strong> '+(earnings ? esc(day(earnings.date)+(earnings.time_label?' · '+earnings.time_label:'')+' (dentro de '+earnings.days_until+' días) — '+earnings.status) : esc(x.earnings_status||'Fecha sin verificar'))+'. Fuente: '+esc(earnings?earnings.source+(earnings.stale?' · dato de caché de '+earnings.cache_age_days+' días':''):'calendarios gratuitos (Nasdaq y Yahoo Finance)')+'; fecha indicativa, contrastar en IR. No es un bloqueo automático.</div>':'';
  const status=x.candidate||{};
  const candidateInfo='<div class="detail-note"><strong>Elegibilidad por puntaje:</strong> '
    +esc(status.level||'Sin clasificación')+' · mínimo 62/100 para vigilancia, 75/100 prioridad de estudio. '
