@@ -48,6 +48,14 @@ SECTORS = {
 }
 
 
+ETF_SYMBOLS=set(SECTORS.values()) | {
+    "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
+    "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
+    "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
+    "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
+}
+
+
 def number(v, nd=3):
     try:
         x = float(v)
@@ -287,12 +295,7 @@ def main():
     frames=get_prices(symbols,now)
     # Catálogo curado: excluimos ETFs y proxies frecuentes de la ponderación accionaria.
     # La clasificación es orientativa; no sustituye confirmación del tipo de instrumento.
-    etfs=set(SECTORS.values()) | {
-        "SPY","QQQ","TQQQ","SQQQ","SPXL","SOXL","SOXS","ARKK","IBB","XBI",
-        "COPX","URA","URNM","GLD","GDX","GDXJ","SLV","USO","UNG","DBA",
-        "CORN","SOYB","IBIT","ETHA","EEM","EWZ","EWJ","EFA","IWM","DIA",
-        "TLT","IEF","HYG","BND","TAN","LIT","KWEB","FXI","BITO","XOP",
-    }
+    etfs=ETF_SYMBOLS
     nonstocks={x["subyacente_usa"] for x in catalog if x["sector"]=="Índices y ETFs"}
     spy_close=last_complete_daily(frames["SPY"],now)["Close"] if "SPY" in frames else None
     qqq_close=last_complete_daily(frames["QQQ"],now)["Close"] if "QQQ" in frames else None
