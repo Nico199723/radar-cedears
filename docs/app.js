@@ -173,46 +173,109 @@ if($('martinNext')){
 
 const signedUsd=v=>(v==null?'—':(Number(v)>=0?'+':'−')+usd(Math.abs(Number(v))));
 const signedPct=v=>(v==null?'—':(Number(v)>0?'+':'')+fmt(v)+'%');
-function linePaper(points){
- const a=points.filter(x=>x&&Number.isFinite(Number(x.equity)));
+function linePaper(points, fills=[], initial=2000){
+ const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+ const dateKey=v=>/^\d{4}-\d{2}-\d{2}/.test(String(v))?String(v).slice(0,10):'';
+ const byDay=new Map();
+ for(const p of points||[]){const date=dateKey(p?.date);if(date&&finite(p.equity))byDay.set(date,{...p,date,equity:Number(p.equity)});}
+ const a=[...byDay.values()].sort((x,y)=>x.date.localeCompare(y.date));
  if(a.length<2)return '<p class="muted">La curva del patrimonio aparecerá con los próximos cierres registrados.</p>';
- const values=a.map(x=>Number(x.equity));
- const lo=Math.min(...values),hi=Math.max(...values);
- const span=Math.max(1,hi-lo),N=a.length;
- const path=a.map((x,i)=>{
-   const xx=(15+i*570/(N-1)).toFixed(2);
-   const yy=(120-(Number(x.equity)-lo)/span*105).toFixed(2);
-   return (i?'L':'M')+xx+' '+yy;
- }).join(' ');
- return '<svg class="paper-svg" viewBox="0 0 600 140" role="img" aria-label="Evolución del patrimonio simulado USD"><line x1="15" y1="120" x2="585" y2="120" stroke="#395168" stroke-width="1"/><path fill="none" stroke="#48d7bd" stroke-width="2.4" d="'+path+'"/></svg><div class="paper-graph-caption">Desde '+esc(day(a[0].date))+' hasta '+esc(day(a[a.length-1].date))+' · '+fmt(lo)+' a '+fmt(hi)+' USD</div>';
+ initial=finite(initial)&&Number(initial)>0?Number(initial):2000;
+ const money=(v,dec=2)=>'US$ '+Number(v).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:dec});
+ const signed=v=>(v<0?'−':v>0?'+':'')+money(Math.abs(v));
+ const shortDate=s=>{const [y,m,d]=s.split('-');return d+'/'+m+(a[0].date.slice(0,4)!==a.at(-1).date.slice(0,4)?'/'+y.slice(2):'');};
+ const eventName=v=>String(v||'').replace(/COMPRA\s+\d+\s*\/\s*\d+/gi,'COMPRA');
+ const events=new Map();
+ for(const f of fills||[]){const k=dateKey(f.date);if(!events.has(k))events.set(k,[]);events.get(k).push(f);}
+ const values=[initial,...a.map(p=>p.equity)],min=Math.min(...values),max=Math.max(...values);
+ const margin=Math.max(initial*.01,(max-min)*.12,1);
+ const nice=v=>{const n=10**Math.floor(Math.log10(v));return [1,2,2.5,5,10].find(k=>k*n>=v-1e-10)*n;};
+ let step=nice((max-min+2*margin)/4),lo=Math.floor((min-margin)/step)*step;
+ while(lo+4*step<max+margin){step=nice(step*1.01);lo=Math.floor((min-margin)/step)*step;}
+ const hi=lo+4*step,dec=step<1?Math.min(6,Math.ceil(-Math.log10(step))+1):0;
+ const W=900,H=330,L=115,R=740,T=45,B=250;
+ const xx=i=>L+i*(R-L)/(a.length-1),yy=v=>B-(v-lo)/(hi-lo)*(B-T);
+ const num=v=>Number(v).toFixed(2);
+ const titleAt=p=>{
+   const ops=(events.get(p.date)||[]).map(f=>eventName(f.action)+' · '+(finite(f.shares)?Number(f.shares).toLocaleString('es-AR',{maximumFractionDigits:6}):'—')+' acc. · '+(finite(f.amount_usd)?money(f.amount_usd):'monto no informado'));
+   return shortDate(p.date)+' · Patrimonio '+money(p.equity)+' · Efectivo '+(finite(p.cash)?money(p.cash):'no informado')+' · Diferencia '+signed(p.equity-initial)+' · '+(ops.length?ops.join('; '):'Sin operaciones');
+ };
+ let svg=`<svg class="paper-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Patrimonio simulado por rueda, con referencia al capital inicial"><title>${esc('Patrimonio simulado · '+shortDate(a[0].date)+' a '+shortDate(a.at(-1).date))}</title>`;
+ svg+='<text x="16" y="22" fill="#b7cbdc" font-size="13">Patrimonio (US$)</text>';
+ for(let i=0;i<5;i++){const v=lo+i*step,y=num(yy(v));svg+=`<line x1="${L}" y1="${y}" x2="${R}" y2="${y}" stroke="#2a3b50"/><text x="${L-12}" y="${num(yy(v)+4)}" text-anchor="end" fill="#9eb4c9" font-size="12">${esc(money(v,dec))}</text>`;}
+ const ticks=new Set(Array.from({length:Math.min(7,a.length)},(_,i)=>Math.round(i*(a.length-1)/(Math.min(7,a.length)-1))));
+ for(const i of ticks){svg+=`<line x1="${num(xx(i))}" y1="${B}" x2="${num(xx(i))}" y2="${B+6}" stroke="#76899d"/><text x="${num(xx(i))}" y="${B+25}" text-anchor="middle" fill="#9eb4c9" font-size="12">${esc(shortDate(a[i].date))}</text>`;}
+ svg+=`<text x="${(L+R)/2}" y="310" text-anchor="middle" fill="#b7cbdc" font-size="13">Rueda (fecha)</text><line x1="${L}" y1="${num(yy(initial))}" x2="${R}" y2="${num(yy(initial))}" stroke="#b9c8d6" stroke-dasharray="6 5"/><text x="${L+8}" y="${num(yy(initial)-12)}" fill="#d4e0eb" font-size="12">${esc('Capital inicial '+money(initial))}</text>`;
+ const segment=(x1,y1,x2,y2,color)=>`<path d="M${num(x1)} ${num(yy(y1))} L${num(x2)} ${num(yy(y2))}" stroke="${color}" stroke-width="2.8" fill="none"/>`;
+ for(let i=1;i<a.length;i++){
+   const v=a[i-1].equity,w=a[i].equity,x=xx(i-1),z=xx(i);
+   if((v-initial)*(w-initial)<0){const cross=x+(initial-v)*(z-x)/(w-v);svg+=segment(x,v,cross,initial,v>=initial?'#48d7bd':'#f27b80')+segment(cross,initial,z,w,w>=initial?'#48d7bd':'#f27b80');}
+   else svg+=segment(x,v,z,w,(v+w)/2>=initial?'#48d7bd':'#f27b80');
+ }
+ for(let i=0;i<a.length;i++){
+   const p=a[i],x=xx(i),y=yy(p.equity),title=esc(titleAt(p));
+   svg+=`<circle cx="${num(x)}" cy="${num(y)}" r="4" fill="${p.equity>=initial?'#48d7bd':'#f27b80'}" tabindex="0"><title>${title}</title></circle>`;
+   const types=[...new Set((events.get(p.date)||[]).map(f=>String(f.action).includes('STOP')?'stop':String(f.action).startsWith('COMPRA')?'buy':'sell'))];
+   types.forEach((type,j)=>{const dx=x+(j-(types.length-1)/2)*15,dy=y+18;
+     const shape=type==='stop'?`<rect x="${num(dx-4)}" y="${num(dy-4)}" width="8" height="8" fill="#f6c16b">`:type==='buy'?`<path d="M${num(dx)} ${num(dy-5)} l5 9 h-10 Z" fill="#48d7bd">`:`<path d="M${num(dx)} ${num(dy+5)} l5 -9 h-10 Z" fill="#f27b80">`;
+     svg+=shape+`<title>${title}</title>`+(type==='stop'?'</rect>':'</path>');});
+ }
+ const last=a.at(-1);
+ svg+=`<text x="${R+12}" y="${num(yy(last.equity)+4)}" fill="${last.equity>=initial?'#48d7bd':'#f27b80'}" font-size="14" font-weight="700">${esc(money(last.equity))}</text></svg>`;
+ return '<div class="paper-chart-scroll">'+svg+'</div><div class="paper-legend"><span>┄ Capital inicial</span><span class="sma21-up">▲ Compra · patrimonio sobre el inicial</span><span class="sma21-down">▼ Venta · patrimonio bajo el inicial</span><span>■ Stop loss</span></div><p class="paper-graph-caption">'+esc('De '+shortDate(a[0].date)+' a '+shortDate(last.date)+' · Patrimonio final '+money(last.equity)+' · Variación '+signed(last.equity-initial))+'</p>';
 }
 function renderPaper(){
  const root=$('paperStatus');
- if(!paper){
-   root.className='paper-status paper-warn';
-   root.textContent='Todavía no hay ledger simulado publicado, o no se pudo recuperar el archivo. No inventamos operaciones.';
-   return;
- }
- const p=paper;
+ if(!paper){root.className='paper-status paper-warn';root.textContent='Todavía no hay ledger simulado publicado, o no se pudo recuperar el archivo. No inventamos operaciones.';return;}
+ const p=paper, pos=p.open_positions||[], closed=[...(p.closed_trades||[])].reverse(),fills=[...(p.fills||[])].reverse();
+ const valid=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+ const money=v=>valid(v)?'US$ '+Number(v).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2}):'—';
+ const signed=v=>valid(v)?(v<0?'−':v>0?'+':'')+money(Math.abs(v)):'—';
+ const pct=v=>valid(v)?(v<0?'−':v>0?'+':'')+Math.abs(v).toLocaleString('es-AR',{maximumFractionDigits:2})+'%':'—';
+ const qty=v=>valid(v)?Number(v).toLocaleString('es-AR',{maximumFractionDigits:6}):'—';
+ const num=v=>valid(v)?Number(v):null;
+ const sum=(arr,fn)=>arr.reduce((n,x)=>n+(num(fn(x))??0),0);
+ const ratio=(a,b)=>valid(a)&&valid(b)&&b>0?100*a/b:null;
+ const color=v=>!valid(v)?'':v>=0?'sma21-up':'sma21-down';
+ const clean=v=>String(v||'').replace(/COMPRA\s+\d+\s*\/\s*\d+/gi,'COMPRA').replace(/AGREGAR TRAMO/gi,'AGREGAR ACCIONES').replace(/\bTRAMOS?\b/gi,'partes');
+ const sub=t=>`<span class="ticker-sub">${esc(t)}</span>`;
+ const td=(v,cls='')=>`<td class="paper-num ${cls}">${esc(v)}</td>`;
+ const date=v=>esc(day(v));
+ const period=(a,b)=>{const short=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v))?String(v).slice(8,10)+'/'+String(v).slice(5,7)+(String(a).slice(0,4)!==String(b).slice(0,4)?'/'+String(v).slice(2,4):''):'—';return esc(short(a)+' → '+short(b));};
+ const initial=num(p.initial_capital_usd)??2000,equity=num(p.equity_usd),cash=num(p.cash_usd);
+ const invested=sum(pos,x=>x.market_value_usd),cost=sum(pos,x=>valid(x.shares)&&valid(x.avg_cost_usd)?x.shares*x.avg_cost_usd:null),floating=sum(pos,x=>x.unrealized_usd);
+ const result=equity===null?null:equity-initial, n=Number(p.closed_count)||0, partial=Number(p.partial_exit_count)||0;
  const outdated=Date.now()-Date.parse((p.last_closed_session||'')+'T23:59:59Z')>6*86400000;
  root.className='paper-status'+(outdated?' paper-warn':'');
- root.textContent=(outdated?'Registro con último cierre antiguo. ':'')+'Cartera 100% ficticia. Ejecución al OPEN siguiente. Stop 8% normal o 6% prudente; reserva 50% o 70%. Gap adverso puede superar el stop. No son órdenes reales.';
+ root.textContent=(outdated?'Registro con último cierre antiguo. ':'')+'Cartera 100% ficticia · se ejecuta al OPEN siguiente · no son órdenes reales';
  $('paperCut').textContent='Última rueda registrada: '+day(p.last_closed_session);
- $('paperEquity').textContent=usd(p.equity_usd);
- $('paperCash').textContent=usd(p.cash_usd);
- $('paperReturn').textContent=signedPct(p.return_pct)+' ('+signedUsd(p.equity_usd-p.initial_capital_usd)+')';
- $('paperReturn').className=Number(p.return_pct)>=0?'sma21-up':'sma21-down';
- $('paperTrades').textContent=String(p.closed_count??0)+' finales / '+String(p.partial_exit_count??0)+' parciales'+(p.win_rate_pct==null?'':' · acierto '+fmt(p.win_rate_pct)+'%');
- $('paperDD').textContent=fmt(p.max_drawdown_pct)+'%';
- $('paperGraph').innerHTML=linePaper(p.equity_history||[]);
- const pos=p.open_positions||[];
- $('paperPositions').innerHTML=pos.length?pos.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.last_price_usd)}</td><td>${usd(x.stop_usd)}<span class="ticker-sub">${x.stop_pct==null?'':fmt(x.stop_pct)+'% · '+esc(x.risk_mode||'NORMAL')}</span></td><td class="${x.unrealized_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.unrealized_usd)}</td><td>${esc(x.sessions_held)}</td></tr>`).join(''):'<tr><td colspan="8">Sin posiciones abiertas. El efectivo queda en reserva mientras no aparezcan condiciones.</td></tr>';
- const closed=[...(p.closed_trades||[])].reverse();
- $('paperClosed').innerHTML=closed.length?closed.map(x=>`<tr><td>${esc(x.ticker)}<span class="ticker-sub">${esc(x.usa)}</span></td><td>${day(x.entry_date)}</td><td>${day(x.exit_date)}</td><td>${esc(x.holding_sessions)}</td><td>${esc(x.tranches)}/3</td><td>${usd(x.avg_cost_usd)}</td><td>${usd(x.exit_usd)}</td><td class="${x.pnl_usd>=0?'sma21-up':'sma21-down'}">${signedUsd(x.pnl_usd)}</td><td>${signedPct(x.return_pct)}</td><td><strong>${x.partial?"PARCIAL "+fmt(x.exit_fraction_pct)+"%":"FINAL"}</strong><span class="ticker-sub">${esc(x.reason)}</span></td></tr>`).join(''):'<tr><td colspan="10">Todavía no hubo salidas parciales ni finales simuladas.</td></tr>';
- const fills=[...(p.fills||[])].reverse();
- $('paperFills').innerHTML=fills.length?fills.map(x=>`<tr><td>${day(x.date)}</td><td>${esc(x.usa)}</td><td><span class="pill ${x.action==='STOP LOSS'?'down':x.action.startsWith('COMPRA')?'up':'hold'}">${esc(x.action)}</span></td><td>${usd(x.price_usd)}</td><td>${fmt(x.shares)}</td><td>${usd(x.amount_usd)}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="7">Todavía no hay compras ni ventas ejecutadas en la simulación.</td></tr>';
+ $('paperEquity').textContent=money(equity);$('paperEquitySub').textContent='Capital inicial '+money(initial);
+ $('paperCash').textContent=money(cash);$('paperCashSub').textContent=(equity>0?fmt(ratio(cash,equity))+'%':'—')+' del patrimonio';
+ $('paperInvested').textContent=money(invested);$('paperInvestedSub').textContent=pos.length+' posiciones · '+(equity>0?fmt(ratio(invested,equity))+'%':'—')+' del patrimonio';
+ $('paperReturn').textContent=signed(result)+' ('+pct(p.return_pct)+')';$('paperReturn').className=color(result);
+ $('paperReturnSub').textContent='Realizado '+signed(p.realized_pnl_usd)+' · Flotante '+signed(floating);
+ $('paperTrades').textContent=n+' '+(n===1?'cerrada':'cerradas')+' · '+partial+' '+(partial===1?'parcial':'parciales');
+ $('paperTradesSub').textContent=n>=10&&valid(p.win_rate_pct)?'Acierto '+fmt(p.win_rate_pct)+'%':'sin dato útil todavía (hay '+n+' de 10)';
+ $('paperDD').textContent=pct(p.max_drawdown_pct);
+ $('paperGraph').innerHTML=linePaper(p.equity_history||[],p.fills||[],initial);
  const waiting=p.pending_orders||[];
- $('paperPending').innerHTML=waiting.length?waiting.map(x=>`<tr><td>${day(x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(x.side==='BUY'?'COMPRA '+(x.tranche||1)+'/3':(Number(x.fraction??1)<1?'VENTA PARCIAL '+fmt(Number(x.fraction)*100)+'%':'VENTA TOTAL'))}</td><td>${esc(x.reason)}</td></tr>`).join(''):'<tr><td colspan="4">Sin órdenes pendientes para el próximo open.</td></tr>';
+ $('paperPending').innerHTML=waiting.length?waiting.map(x=>{
+   let action;
+   if(x.side==='BUY'){
+     const weight=[.40,.35,.25][Number(x.tranche)-1];
+     action=valid(x.budget)&&weight!==undefined?'COMPRA · hasta '+money(Number(x.budget)*weight):'COMPRA · importe no informado';
+   }else{
+     const position=pos.find(a=>a.usa===x.usa),fraction=Number(x.fraction??1);
+     action=(fraction<1?'VENTA PARCIAL '+qty(fraction*100)+'%':'VENTA TOTAL')+' · '+(position&&valid(position.shares)&&fraction>0&&fraction<=1?'≈ '+qty(position.shares*fraction)+' acc.':'cantidad no informada');
+   }
+   return `<tr><td>${date(x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(action)}</td><td>${esc(clean(x.reason))}</td></tr>`;
+ }).join(''):'<tr><td colspan="4">Sin órdenes pendientes para la próxima apertura.</td></tr>';
+ $('paperPositions').innerHTML=pos.length?pos.map(x=>{
+   const c=valid(x.shares)&&valid(x.avg_cost_usd)?x.shares*x.avg_cost_usd:null, r=ratio(x.unrealized_usd,c),distance=valid(x.stop_usd)&&x.last_price_usd>0?100*(x.stop_usd/x.last_price_usd-1):null;
+   return `<tr><td>${esc(x.ticker||x.usa)}${sub(x.usa)}</td>${td(qty(x.shares))}${td(money(x.avg_cost_usd))}${td(money(x.last_price_usd))}${td(money(x.market_value_usd))}${td(valid(ratio(x.market_value_usd,equity))?fmt(ratio(x.market_value_usd,equity))+'%':'—')}<td class="paper-num ${color(x.unrealized_usd)}">${esc(signed(x.unrealized_usd))}${sub(pct(r))}</td><td class="paper-num">${esc(money(x.stop_usd))}${sub(pct(distance)+' al último · '+(x.risk_mode||'No informado'))}</td><td>${date(x.entry_date)}${sub((x.sessions_held??'—')+' ruedas')}</td></tr>`;
+ }).join('')+`<tr class="paper-totals"><th scope="row">Totales</th><td></td><td class="paper-num" colspan="2">${esc('Costo '+money(cost))}</td>${td(money(invested))}${td(equity>0?fmt(ratio(invested,equity))+'%':'—')}${td(signed(floating),color(floating))}<td colspan="2"></td></tr>`:'<tr><td colspan="9">Sin posiciones abiertas. El efectivo queda en reserva mientras no aparezcan condiciones.</td></tr>';
+ $('paperClosed').innerHTML=closed.length?closed.map(x=>`<tr><td>${esc(x.ticker||x.usa||'—')}</td><td>${period(x.entry_date,x.exit_date)}${sub((x.holding_sessions??'—')+' ruedas')}</td>${td(qty(x.shares))}${td(money(x.cost_usd))}<td class="paper-num">${esc(money(x.exit_usd))}${sub('por acción')}</td><td class="paper-num ${color(x.pnl_usd)}">${esc(signed(x.pnl_usd))}${sub(pct(x.return_pct))}</td><td><strong>${esc(x.partial?'PARCIAL '+qty(x.exit_fraction_pct)+'%':'FINAL')}</strong>${sub(clean(x.reason))}</td></tr>`).join(''):'<tr><td colspan="7">Todavía no hubo salidas parciales ni finales simuladas.</td></tr>';
+ $('paperFills').innerHTML=fills.length?fills.map(x=>`<tr><td>${date(x.date)}</td><td>${esc(x.usa)}</td><td><span class="pill ${String(x.action).includes('STOP')?'down':String(x.action).startsWith('COMPRA')?'up':'hold'}">${esc(clean(x.action))}</span></td>${td(qty(x.shares))}${td(money(x.price_usd))}${td(money(x.amount_usd))}<td>${esc(clean(x.reason))}</td></tr>`).join(''):'<tr><td colspan="7">Sin operaciones: todavía no hay compras ni ventas ejecutadas en la simulación.</td></tr>';
 }
 async function loadPaper(){
  try{

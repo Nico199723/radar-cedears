@@ -94,29 +94,40 @@
     <section id="pageCartera" class="page hidden"><div class="block-head"><div><span class="eyebrow">GUARDADO SÓLO EN ESTE NAVEGADOR</span><h2>Mi seguimiento</h2></div></div><p class="muted">Marcá acciones desde una ficha con «Seguir / tengo». Sólo se guarda el ticker en este navegador; no cargamos tus cantidades, saldos ni datos de los brokers a GitHub.</p><div id="watchRows" class="watch-grid"></div></section>
     <section id="pageSimulador" class="page hidden" aria-label="Track record en dólares simulado">
       <div class="block-head">
-        <div><span class="eyebrow">SOLO CARTERA SIMULADA · 100% USA USD</span>
-          <h2>Track record · Capital inicial US$ 2.000</h2></div>
+        <div><span class="eyebrow">SOLO CARTERA SIMULADA · 100% USA USD</span><h2>Track record</h2></div>
         <span class="muted" id="paperCut">Sin registros todavía</span>
       </div>
-      <p class="paper-description">Simulación forward sin reconstruir operaciones históricas. Compras 40/35/25 y ventas parciales de 50% en 2R o debilidad, resto con trailing. Mercado favorable: hasta US$ 250 por posición, 50% de reserva y stop 8%. Mercado mixto/defensivo: hasta US$ 120, 70% de reserva y stop 6%, máximo 2 posiciones. Los ETFs apalancados se limitan aún más. Stop o ruptura estructural liquidan todo el remanente. Se simula al <strong>OPEN siguiente</strong>, con comisión y slippage de 0,05% y 0,10% por lado; los gaps pueden generar pérdidas superiores al 8%.</p>
-      <div class="paper-status" id="paperStatus">Buscando historial de operaciones...</div>
+      <div class="paper-status" id="paperStatus">Cartera 100% ficticia · se ejecuta al OPEN siguiente · no son órdenes reales</div>
       <div class="paper-stats">
-        <div class="paper-stat"><span>Patrimonio simulado</span><strong id="paperEquity">—</strong></div>
-        <div class="paper-stat"><span>Efectivo libre</span><strong id="paperCash">—</strong></div>
-        <div class="paper-stat"><span>Resultado acumulado</span><strong id="paperReturn">—</strong></div>
-        <div class="paper-stat"><span>Posiciones cerradas / ventas parciales</span><strong id="paperTrades">—</strong></div>
-        <div class="paper-stat"><span>Máximo drawdown</span><strong id="paperDD">—</strong></div>
+        <div class="paper-stat"><span>Patrimonio simulado</span><strong id="paperEquity">—</strong><small id="paperEquitySub">Capital inicial US$ 2.000</small></div>
+        <div class="paper-stat"><span>Efectivo libre</span><strong id="paperCash">—</strong><small id="paperCashSub">% del patrimonio</small></div>
+        <div class="paper-stat"><span>Invertido hoy</span><strong id="paperInvested">—</strong><small id="paperInvestedSub">Posiciones y % del patrimonio</small></div>
+        <div class="paper-stat"><span>Resultado acumulado</span><strong id="paperReturn">—</strong><small id="paperReturnSub">Realizado · Flotante</small></div>
+        <div class="paper-stat"><span>Operaciones</span><strong id="paperTrades">—</strong><small id="paperTradesSub">sin dato útil todavía (hay 0 de 10)</small></div>
+        <div class="paper-stat"><span>Máximo drawdown</span><strong id="paperDD">—</strong><small>Mayor caída desde un máximo registrado</small></div>
       </div>
       <div class="paper-graph" id="paperGraph"></div>
-      <h3 class="paper-subtitle">Posiciones abiertas</h3>
-      <div class="tablebox"><table><thead><tr><th>Activo USA</th><th>Compra inicial</th><th>Tramos</th><th>Costo promedio</th><th>Último USD</th><th>Stop USD</th><th>Resultado flotante</th><th>Ruedas</th></tr></thead><tbody id="paperPositions"><tr><td colspan="8">Sin operaciones registradas.</td></tr></tbody></table></div>
-      <h3 class="paper-subtitle">Salidas parciales y finales · tiempo de tenencia</h3>
-      <div class="tablebox"><table><thead><tr><th>Activo USA</th><th>Entrada</th><th>Salida</th><th>Ruedas</th><th>Tramos</th><th>Costo USD</th><th>Venta USD</th><th>Resultado USD</th><th>Rendimiento</th><th>Tipo de salida / motivo</th></tr></thead><tbody id="paperClosed"><tr><td colspan="10">Todavía no hay salidas registradas.</td></tr></tbody></table></div>
-      <h3 class="paper-subtitle">Registro de compras, ventas y stops</h3>
-      <div class="tablebox"><table><thead><tr><th>Fecha</th><th>Activo</th><th>Evento</th><th>Precio USD</th><th>Acciones</th><th>Monto USD</th><th>Motivo</th></tr></thead><tbody id="paperFills"><tr><td colspan="7">No hubo fills simulados todavía.</td></tr></tbody></table></div>
-      <h3 class="paper-subtitle">Órdenes pendientes para la próxima apertura</h3>
+      <h3 class="paper-subtitle">Órdenes para la próxima apertura</h3>
       <div class="tablebox"><table><thead><tr><th>Señal al cierre</th><th>Activo</th><th>Acción prevista</th><th>Motivo</th></tr></thead><tbody id="paperPending"><tr><td colspan="4">Sin órdenes pendientes.</td></tr></tbody></table></div>
-      <p class="method-disclaimer">Saldo enteramente ficticio y registro de señales forward, sin conexión con tus brokers. La simulación usa precios ajustados de Yahoo; puede haber revisiones por splits y dividendos. No incluye ratio/CCL, impuestos ni spread de BYMA. El historial se conserva con snapshots de GitHub Actions sujetos a retención; si deja de poder recuperarse, el sistema no reinicia el capital silenciosamente.</p>
+      <h3 class="paper-subtitle">Posiciones abiertas</h3>
+      <div class="tablebox"><table><thead><tr><th>Activo</th><th class="paper-num">Cantidad</th><th class="paper-num">Costo prom.</th><th class="paper-num">Último</th><th class="paper-num">Valor</th><th class="paper-num">% cartera</th><th class="paper-num">Resultado</th><th class="paper-num">Stop</th><th>Desde</th></tr></thead><tbody id="paperPositions"><tr><td colspan="9">Sin operaciones registradas.</td></tr></tbody></table></div>
+      <h3 class="paper-subtitle">Operaciones cerradas</h3>
+      <div class="tablebox"><table><thead><tr><th>Activo</th><th>Período</th><th class="paper-num">Cantidad</th><th class="paper-num">Costo</th><th class="paper-num">Venta</th><th class="paper-num">Resultado</th><th>Tipo y motivo</th></tr></thead><tbody id="paperClosed"><tr><td colspan="7">Todavía no hay salidas registradas.</td></tr></tbody></table></div>
+      <h3 class="paper-subtitle">Registro de operaciones</h3>
+      <div class="tablebox"><table><thead><tr><th>Fecha</th><th>Activo</th><th>Evento</th><th class="paper-num">Cantidad</th><th class="paper-num">Precio</th><th class="paper-num">Monto</th><th>Motivo</th></tr></thead><tbody id="paperFills"><tr><td colspan="7">Sin operaciones registradas.</td></tr></tbody></table></div>
+      <details class="paper-rules">
+        <summary>Reglas y supuestos de la simulación</summary>
+        <ul>
+          <li>Simulación forward: no reconstruye operaciones históricas. Capital inicial US$ 2.000 ficticios.</li>
+          <li>Compras de a partes: 40% / 35% / 25%. Los importes pendientes son máximos orientativos, sujetos a efectivo y límites al ejecutar.</li>
+          <li>Ventas parciales del 50% en 2R o por debilidad; el remanente sigue con stop móvil. Stop o ruptura estructural liquidan todo el remanente.</li>
+          <li>Mercado favorable: hasta US$ 250 por posición, reserva del 50% y stop del 8%.</li>
+          <li>Mercado mixto o defensivo: hasta US$ 120 por posición, reserva del 70%, stop del 6% y máximo 2 posiciones. Los ETFs apalancados tienen límites más estrictos.</li>
+          <li>Ejecución al OPEN siguiente: comisión del 0,05% y slippage del 0,10% por lado. Los gaps pueden provocar pérdidas superiores al stop.</li>
+          <li>Acierto calculado sobre operaciones completamente cerradas; se muestra desde 10 cierres. Las ventas parciales se cuentan aparte.</li>
+        </ul>
+        <p class="method-disclaimer">Saldo enteramente ficticio y registro de señales forward, sin conexión con tus brokers. La simulación usa precios ajustados de Yahoo; puede haber revisiones por splits y dividendos. No incluye ratio/CCL, impuestos ni spread de BYMA. El historial se conserva con snapshots de GitHub Actions sujetos a retención; si deja de poder recuperarse, el sistema no reinicia el capital silenciosamente.</p>
+      </details>
     </section>
     <section id="pageMetodo" class="page hidden"><div class="block-head"><div><span class="eyebrow">REGLAS EXPLÍCITAS</span><h2>Cómo decidimos</h2></div></div>
       <div class="method-grid">

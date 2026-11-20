@@ -79,3 +79,22 @@
 .rebound-warning{padding:14px 16px;border:1px dashed #b98538;background:rgba(154,93,29,.12);border-radius:12px;color:#f6d6a5;font-size:13px;line-height:1.6;margin:16px 0 20px}
 .rebound-risk{display:inline-block;color:#f7d6a2!important;border:1px solid #b9863a;border-radius:6px;padding:4px 6px;font-weight:750;font-size:10px;letter-spacing:.04em;background:#443119}
 #reboundRows td{vertical-align:middle}
+
+/* Track record: readable quantities, explicit chart scale, compact rules. */
+#pageSimulador .paper-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+#pageSimulador .paper-stat small{display:block;margin-top:8px;color:#9fb3c7;font-size:12px;line-height:1.5}
+#pageSimulador .paper-stat strong{font-variant-numeric:tabular-nums}
+#pageSimulador .paper-stat strong.sma21-down{color:#f27b80}
+#pageSimulador .paper-stat strong.sma21-up{color:#48d7bd}
+#pageSimulador .paper-chart-scroll{width:100%;overflow-x:auto}
+#pageSimulador .paper-svg{width:100%;min-width:760px;height:auto;font-family:inherit;font-variant-numeric:tabular-nums}
+#pageSimulador .paper-legend{display:flex;flex-wrap:wrap;gap:10px 22px;font-size:12px;color:#b7cbdc;margin-top:8px}
+#pageSimulador .paper-graph-caption{line-height:1.6;margin-top:12px}
+#pageSimulador .paper-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#pageSimulador .paper-num .ticker-sub{text-align:right}
+#pageSimulador table{font-size:13px}
+#pageSimulador .paper-totals{background:#1a2a3a;font-weight:700;border-top:2px solid #395168}
+#pageSimulador .paper-rules{margin-top:28px;padding:18px;border:1px solid #2d4054;border-radius:11px;color:#a9bacb;font-size:13px;line-height:1.7}
+#pageSimulador .paper-rules summary{cursor:pointer;color:#e4f9f2;font-weight:650}
+#pageSimulador .paper-rules li{margin:9px 0}
+@media(max-width:620px){#pageSimulador .paper-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#pageSimulador .paper-stat strong{font-size:17px}}
