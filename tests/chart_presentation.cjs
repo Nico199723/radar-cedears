@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync('docs/app.js','utf8'),context={Intl,Date,Number,Math};
+vm.createContext(context);
+vm.runInContext(source.split('\n').filter(x=>/^const (esc|usd|fmt|day)=/.test(x)).join('\n')+'\n'+source.slice(source.indexOf('function tickerChart('),source.indexOf('function detailContent(')),context);
+const points=Array.from({length:90},(_,i)=>({date:'2026-11-20',close:100+i/10,sma21:100,sma50:99,sma200:98}));
+context.data={price_history:points,invalid_usd:95,target_2r:120};
+const html=vm.runInContext('tickerChart(data)',context);
+for(const text of ['SMA21','SMA50','SMA200','Stop ref.','Objetivo 2R','20/11/2026','US$'])assert(html.includes(text),text);
+assert(!/NaN|undefined/.test(html));context.data.price_history[0].date='<script>bad</script>';
+assert(!vm.runInContext('tickerChart(data)',context).includes('<script>'));
+console.log('Ticker chart: series, dates, money, levels and escaping OK');

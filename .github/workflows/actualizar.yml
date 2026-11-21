@@ -55,6 +55,13 @@ jobs:
           key: earnings-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             earnings-v1-
+      - name: Restaurar observaciones de señales (independiente del ledger)
+        uses: actions/cache@v4
+        with:
+          path: .cache/signals.json
+          key: signal-observations-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            signal-observations-v1-
       - name: Validar configuracion
         run: python scripts/actualizar.py --check
       - name: Tests del motor sin conexión

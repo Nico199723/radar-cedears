@@ -32,7 +32,7 @@ const eventHtml=x=>{
  if(st.startsWith('SIN FECHA')) return '<span class="muted" title="Consultado: sin fecha futura verificable en las fuentes disponibles; revisar en relaciones con inversores">s/f</span>';
  return '<span class="muted" title="Fecha no verificada: no consultada en esta corrida">—</span>';
 };
-const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=72?'good':v<35?'bad':''}">${esc(v)}</span>`;
+const barScore=(v)=>v==null?'<span class="muted">—</span>':`<span class="score ${v>=(dataset?.meta?.methodology?.buy??Infinity)?'good':v<35?'bad':''}">${esc(v)}</span>`;
 const day=(s)=>{if(!s)return '—';try{return new Date(s+'T12:00:00').toLocaleDateString('es-AR')}catch(e){return s}};
 const group=s=>{s=String(s||'');if(s==='COMPRA CONDICIONAL'||s==='COMPRA CON PRECAUCIÓN')return 'compra';if(s.startsWith('VIGILAR COMPRA'))return 'vigilancia';if(s.includes('REDUCIR')||s.includes('SALIR'))return 'venta';if(s.includes('MANTENER'))return 'esperar';if(s.includes('SIN DATOS')||s.includes('SUBYACENTE')||s.includes('VIEJOS'))return 'sindatos';return 'esperar'};
 function setTab(t){view=t;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.tab===t);x.setAttribute('aria-current',x.dataset.tab===t?'page':'false')});[['acciones','pageAcciones'],['rebotes','pageRebotes'],['sectores','pageSectores'],['cartera','pageCartera'],['simulador','pageSimulador'],['metodo','pageMetodo']].forEach(([k,id])=>$(id).classList.toggle('hidden',k!==t));if(t==='cartera')renderTracked();}
@@ -43,8 +43,12 @@ function renderHeader(){const m=dataset.meta||{};const a=dataset.assets||[];cons
  else if(!fresh){banner.className='critical bad';banner.textContent='ATENCIÓN: última actualización de hace '+Math.max(0,Math.round(age))+' horas. Revisá GitHub Actions; no operes basándote en señales desactualizadas.'}
  else{banner.className='critical ok';banner.textContent='Indicadores sobre cierres diarios de EE.UU. en dólares. Señales informativas: no son órdenes ni reemplazan validación de BYMA y fundamentales.'}
  $('macroValue').textContent=dataset.macro?.state||'—';$('macroValue').style.color=dataset.macro?.state==='FAVORABLE'?'#5ee1c2':dataset.macro?.state==='DEFENSIVO'?'#f27b80':'#f6c16b';
+ const method=m.methodology||{};
+ if($('rankingDescription'))$('rankingDescription').textContent=method.engine?.startsWith('Espectral')?'Score espectral único para ranking y señal. Cupo sectorial suave; mejores disponibles identificados.':'Ranking para estudiar del motor vigente. Puede incluir activos sin compra; verificá la señal de cada ficha.';
+ for(const [id,value] of [['methodSummary',method.description],['methodRules',method.description],['methodMacro',method.macro]]){if($(id))$(id).textContent=value||'Reglas no incluidas en este corte; actualizar datos.';}
  const policy=dataset.risk_policy_paper||{};
  $('macroSub').textContent=(policy.mode==='PRUDENTE'?'PRECAUCIÓN: posición máx. US$ 120 · reserva 70% · stop 6% · ':policy.mode==='NORMAL'?'NORMAL: posición máx. US$ 250 · reserva 50% · stop 8% · ':'SIN NUEVAS COMPRAS: datos macro/VIX · ')+(dataset.macro?.vix!=null?'VIX '+fmt(dataset.macro.vix):'sin VIX verificable');
+ if(m.methodology?.engine?.startsWith('Espectral'))$('macroSub').textContent=m.methodology.macro;
  const ready=a.filter(x=>group(x.signal)==='compra').length,watch=a.filter(x=>group(x.signal)==='vigilancia').length;
  $('buyCount').textContent=ready;$('buyCaption').textContent=watch+' candidatas en vigilancia (no son compras)';$('assetCount').textContent=m.universe_size||a.length;
  $('mappedCount').textContent=(m.mapped_us||0)+' con subyacente USA candidato';$('coverageCount').textContent=generated?fmt(coverage)+'%':'Sin datos';
@@ -62,6 +66,7 @@ function renderAssets(){const q=$('searchInput').value.toLowerCase().trim(),sect
  $('rowCount').textContent=arr.length+' / '+(dataset.assets||[]).length+' instrumentos';
  const visible=arr.slice(0,400);
  $('assetRows').innerHTML=visible.length?visible.map(x=>`<tr tabindex="0" data-ticker="${esc(x.ticker)}"><td>${esc(x.ticker)}<span class="ticker-sub">USA: ${esc(x.usa||'NO APLICA')} · ${esc(x.sector)}</span></td><td>${usd(x.data?.price)}</td><td><span class="${x.data?.cross_up21?'sma21-up':x.data?.cross_down21?'sma21-down':'muted'}">${usd(x.data?.ma21)}</span><span class="ticker-sub">${esc(x.data?.sma21_state||'—')}</span></td><td>${fmt(x.data?.rsi14d)}</td><td>${x.data?.macd_hist_d==null?'—':fmt(x.data?.macd_hist_d)}</td><td><span title="${esc((x.data?.rank_penalty_reasons||[]).join(' · ')||'Sin penalizaciones')}">${barScore(x.score_decision??x.data?.rank_score)}</span><span class="ticker-sub">${esc(x.candidate?.level||x.data?.rank_level||'')}</span></td><td>${fmt(x.data?.rvol20)}x</td><td>${eventHtml(x)}</td><td>${esc(x.data?.trend||'NO VERIFICADO')}</td><td>${badge(x.signal,x.tone)}</td></tr>`).join(''):'<tr><td colspan="10" style="padding:30px">No hay resultados para estos filtros.</td></tr>';
+ const cards=$('assetCards');if(cards){cards.innerHTML=visible.map(x=>`<button class="asset-card" data-ticker="${esc(x.ticker)}"><strong>${esc(x.ticker)}</strong><span>Score ${esc(x.data?.rank_score)}</span>${badge(x.signal,x.tone)}<span>Balance: ${eventHtml(x)}</span><small>Ver gráfico y detalle ›</small></button>`).join('')||'<p>Sin resultados.</p>';cards.querySelectorAll('[data-ticker]').forEach(el=>el.onclick=()=>openDetails('asset',el.dataset.ticker));}
  $('assetRows').querySelectorAll('tr[data-ticker]').forEach(el=>{const act=()=>openDetails('asset',el.dataset.ticker);el.onclick=act;el.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act()}}});}
 function renderRebounds(){
  const root=$('reboundRows');if(!root)return;
@@ -87,7 +92,7 @@ function renderTop5(){
  root.innerHTML=arr.map((x,i)=>`<article class="top5-card" data-top5="${esc(x.ticker)}" tabindex="0" role="button" aria-label="Ver ficha de ${esc(x.ticker)}">
   <div class="top5-heading"><span class="top5-number">${i+1}</span><div><h3>${esc(x.ticker)} <small>${esc(x.usa)}</small></h3><small>${esc(x.sector)}</small></div><strong class="top5-score">${esc(x.rank_score)}<span>/100</span></strong></div>
   <div class="top5-pills"><span class="top5-tag">${esc(x.tag)}</span>${badge(x.signal)}${eventHtml(x)}</div>
-  <div class="top5-stats"><div><span>Último cierre USD</span><strong>${usd(x.price)}</strong></div><div><span>SMA21 diario</span><strong>${usd(x.ma21)}</strong></div><div><span>RVOL20</span><strong>${fmt(x.rvol20)}x</strong></div><div><span>RS vs SPY (20r)</span><strong>${x.relative_spy20==null?'—':fmt(x.relative_spy20)+' pp'}</strong></div><div><span>RS vs QQQ (20r)</span><strong>${x.relative_qqq20==null?'—':fmt(x.relative_qqq20)+' pp'}</strong></div><div><span>Penalización</span><strong>${x.rank_penalty?'−'+fmt(x.rank_penalty)+' pts':'0 pts'}</strong></div><div><span>Invalidación ref.</span><strong>${usd(x.invalid_usd)}</strong></div></div>
+  <div class="top5-stats"><div><span>${dataset.meta?.provisional?'Provisorio USD':'Último cierre USD'}</span><strong>${usd(x.price)}</strong></div><div><span>SMA21 diario</span><strong>${usd(x.ma21)}</strong></div><div><span>RVOL20</span><strong>${fmt(x.rvol20)}x</strong></div><div><span>RS vs SPY (20r)</span><strong>${x.relative_spy20==null?'—':fmt(x.relative_spy20)+' pp'}</strong></div><div><span>RS vs QQQ (20r)</span><strong>${x.relative_qqq20==null?'—':fmt(x.relative_qqq20)+' pp'}</strong></div><div><span>Penalización</span><strong>${x.rank_penalty?'−'+fmt(x.rank_penalty)+' pts':'0 pts'}</strong></div><div><span>Invalidación ref.</span><strong>${usd(x.invalid_usd)}</strong></div></div>
   <div class="top5-footer"><span>${esc(x.candidate?.level||x.rank_level||'Revisar setup')}</span><span>Ver ficha ›</span></div>
  </article>`).join('');
  root.querySelectorAll('[data-top5]').forEach(el=>{
@@ -99,20 +104,36 @@ function renderTop5(){
 function renderSectors(){const arr=[...(dataset.sectors||[])].sort((a,b)=>(b.data?.rank_score??-1)-(a.data?.rank_score??-1));$('sectorCards').innerHTML=arr.length?arr.map(x=>`<article class="sector-card" data-sector="${esc(x.sector)}" tabindex="0"><div class="sector-heading"><div><h3>${esc(x.sector)}</h3><small>ETF proxy: ${esc(x.proxy)} · USD</small></div><div class="sector-score">${x.data?.rank_score??'—'}<span>/100</span></div></div><div class="meter"><span style="width:${Math.min(100,Math.max(0,x.data?.rank_score??0))}%"></span></div><p class="sector-info">${esc(x.data?.trend||'Sin lectura')} · RSI14 ${fmt(x.data?.rsi14d)} · ROC20 ${fmt(x.data?.roc20)}%</p><div class="sector-action">${badge(x.signal,x.tone)}<span class="muted">Detalle ›</span></div></article>`).join(''):'<p class="muted">Pendiente del primer corte automático.</p>';
  $('sectorCards').querySelectorAll('[data-sector]').forEach(el=>{const act=()=>openDetails('sector',el.dataset.sector);el.onclick=act;el.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act()}}});}
 function renderTracked(){const arr=(dataset.assets||[]).filter(x=>tracked.has(x.ticker));$('trackedCount').textContent=tracked.size;$('watchRows').innerHTML=arr.length?arr.map(x=>`<div class="watch-card" data-watch="${esc(x.ticker)}" tabindex="0"><div><h3>${esc(x.ticker)} · ${esc(x.usa||'sin USD')}</h3><small>${esc(x.sector)}</small></div><div>${badge(x.signal,x.tone)}</div><div class="muted">Score ${x.data?.score??'—'}/100 · cierre ${day(x.data?.date)}</div></div>`).join(''):'<p class="muted">Todavía no marcaste instrumentos. Elegí un ticker en «Acciones y ETFs» y tocá «Seguir».</p>';$('watchRows').querySelectorAll('[data-watch]').forEach(el=>{el.onclick=()=>openDetails('asset',el.dataset.watch);el.onkeydown=e=>{if(e.key==='Enter'){openDetails('asset',el.dataset.watch)}}})}
+function tickerChart(d){
+ const points=(d.price_history||[]).filter(p=>p.close!=null&&Number.isFinite(Number(p.close)));
+ if(points.length<2)return '<p class="muted">Gráfico pendiente de un corte con histórico.</p>';
+ const W=760,H=290,L=70,R=85,T=22,B=40,colors={close:'#e5eeee',sma21:'#5ee1c2',sma50:'#f6c16b',sma200:'#9f9aff'};
+ const values=points.flatMap(p=>Object.keys(colors).map(k=>p[k])).concat([d.invalid_usd,d.target_2r]).filter(v=>v!=null&&Number.isFinite(Number(v))).map(Number);
+ const lo=Math.min(...values),hi=Math.max(...values),pad=Math.max((hi-lo)*.08,hi*.005),min=lo-pad,max=hi+pad;
+ const x=i=>L+i*(W-L-R)/(points.length-1), y=v=>T+(max-v)*(H-T-B)/(max-min);
+ let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="90 ruedas con medias móviles, stop y objetivo"><title>Precio del subyacente en USD</title>`;
+ for(let i=0;i<5;i++){const v=min+(max-min)*i/4;svg+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#28404a"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" fill="#a5b9c5" font-size="10">${esc(usd(v))}</text>`;}
+ for(const [k,color] of Object.entries(colors)){let path='',previous=false;points.forEach((p,i)=>{const valid=p[k]!=null&&Number.isFinite(Number(p[k]));if(valid)path+=`${previous?'L':'M'}${x(i)},${y(p[k])} `;previous=valid;});svg+=`<path d="${path}" fill="none" stroke="${color}" stroke-width="${k==='close'?2:1.3}"/>`;}
+ for(const [key,label,color] of [['invalid_usd','Stop ref.','#f27b80'],['target_2r','Objetivo 2R','#5ee1c2']]){const v=d[key];if(v!=null&&Number.isFinite(Number(v)))svg+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${color}" stroke-dasharray="4 4"/><text x="${W-R+5}" y="${y(v)+4}" font-size="10" fill="${color}">${esc(label)}</text>`;}
+ points.forEach((p,i)=>{svg+=`<circle cx="${x(i)}" cy="${y(p.close)}" r="4" fill="transparent"><title>${esc(day(p.date)+' · '+usd(p.close))}</title></circle>`;});
+ [...new Set([0,Math.floor((points.length-1)/2),points.length-1])].forEach(i=>svg+=`<text x="${x(i)}" y="${H-12}" text-anchor="middle" fill="#a5b9c5" font-size="11">${esc(day(points[i].date))}</text>`);
+ return '<section class="ticker-chart"><h3>Últimas 90 ruedas · USD</h3><div class="chart-scroll">'+svg+'</svg></div><p class="muted">Precio · <span style="color:#5ee1c2">SMA21</span> · <span style="color:#f6c16b">SMA50</span> · <span style="color:#9f9aff">SMA200</span> · Stop y objetivo de referencia del corte, no históricos.</p></section>';
+}
+
 function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy:x.ticker,name=type==='sector'?x.sector:x.ticker;
  const isAsset=type==='asset';const title=isAsset?`${esc(name)} <span style="color:#7fc0c0;font-size:15px">/ ${esc(x.usa||'sin subyacente')}</span>`:esc(name);
  const what=x.reasons&&x.reasons.length?x.reasons:['Sin histórico suficiente para interpretar el activo'];
  let plan='No hay gatillo automático confirmado. Esperar confluencia diaria/4H y validación del mercado.';
  if(group(x.signal)==='compra')plan='Entrada eventual en 3 tramos 40% / 35% / 25%, sólo tras confirmar reacción, volumen y concentración de cartera.';
- if(x.signal==='COMPRA CON PRECAUCIÓN')plan='Macro adverso: NO impide operar con fuerza propia. Papel simulado hasta US$ 120, reserva del 70%, stop de referencia 6% y máximo 2 posiciones; primer tramo del 40% y los restantes sólo con confirmación. Los gaps pueden superar el stop.';
+ if(x.signal==='COMPRA CON PRECAUCIÓN'&&!d.spectrum)plan='Macro adverso: NO impide operar con fuerza propia. Papel simulado hasta US$ 120, reserva del 70%, stop de referencia 6% y máximo 2 posiciones; primer tramo del 40% y los restantes sólo con confirmación. Los gaps pueden superar el stop.';
  const earnings=upcomingEarnings(x);
  const balanceInfo=isAsset?'<div class="detail-note"><strong>Próximo balance:</strong> '+(earnings ? esc(day(earnings.date)+(earnings.time_label?' · '+earnings.time_label:'')+' (dentro de '+earnings.days_until+' días) — '+earnings.status) : esc(x.earnings_status||'Fecha sin verificar'))+'. Fuente: '+esc(earnings?earnings.source+(earnings.stale?' · dato de caché de '+earnings.cache_age_days+' días':''):'calendarios gratuitos (Nasdaq y Yahoo Finance)')+'; fecha indicativa, contrastar en IR. No es un bloqueo automático.</div>':'';
  const status=x.candidate||{};
- const candidateInfo='<div class="detail-note"><strong>Elegibilidad por puntaje:</strong> '
-   +esc(status.level||'Sin clasificación')+' · mínimo 62/100 para vigilancia, 75/100 prioridad de estudio. '
-   +'Score habilitación vigente (criterio previo): '+esc(d.rank_score_signal==null?'—':d.rank_score_signal+'/100')+'. '
-   +'<strong>Condiciones pendientes:</strong> '+esc((status.blockers||[]).join(' · ')||'ninguna identificada')
-   +'. El puntaje no es un gatillo ni orden de compra.</div>';
+ const candidateInfo='<div class="detail-note">'+esc(dataset.meta?.methodology?.description||'Configuración no disponible')+'</div>';
+ const spectral=d.spectrum;
+ const spectrumInfo=spectral?'<div class="detail-note"><strong>'+esc(spectral.stage)+'</strong><div class="meter"><span style="width:'+Math.min(100,Math.max(0,Number(d.rank_score)||0))+'%"></span></div><p>'+esc((spectral.narrative||[]).join(' · '))+'</p><p>Tamaño relativo: '+esc(fmt(spectral.size_mult*100))+'% · Fricciones: '+esc((spectral.frictions||[]).join(' · ')||'ninguna')+'</p></div>':'';
+ const atrPlan=d.atr_risk_preview;
+ const atrInfo=atrPlan?'<div class="detail-note"><strong>Ensayo ATR · no ejecutado:</strong> stop '+usd(atrPlan.stop)+' · '+fmt(atrPlan.shares)+' acciones · riesgo estimado '+usd(atrPlan.risk_usd)+' sobre US$ 2.000. Hasta 0,5%; límite de exposición 50%, costos incluidos; gaps pueden excederlo. Sizing de referencia desde el cierre, se recalcula al open.</div>':'';
  const penalties=Array.isArray(d.rank_penalty_reasons)?d.rank_penalty_reasons:[];
  const penaltyInfo='<div class="detail-note"><strong>Score Oportunidad:</strong> '
     +esc(d.rank_score==null?'Sin datos':d.rank_score+'/100')
@@ -125,7 +146,8 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  const riskPlan=isAsset&&rp?'<div class="detail-note"><strong>Régimen de exposición SIMULADA:</strong> '+esc(rp.mode)+' · posición máxima '+usd(rp.max_position_usd)+' · reserva '+fmt(rp.reserve_pct)+'% · stop de referencia '+(rp.stop_pct==null?'sin nuevas compras':fmt(rp.stop_pct)+'%')+'. No es una instrucción a tu broker.</div>':'';
  const objective=d.target_2r!=null?`${usd(d.target_2r)} (2R) · ${usd(d.target_3r)} (3R)`:'No definido: la relación riesgo/beneficio aún no es adecuada.';
  const riskNote=isAsset?`<div class="detail-note"><strong>Operabilidad BYMA pendiente:</strong> este motor NO certifica ratio, listado vigente, liquidez, spread ni disponible en Bull/IOL. Confirmá <a class="mini-link" target="_blank" rel="noopener noreferrer" href="https://www.byma.com.ar/productos/productos-financieros/cedears">el PDF oficial de BYMA</a> antes de cualquier orden. Los indicadores son del subyacente USA en USD.</div>`:'<div class="detail-note">El ETF es proxy de fortaleza sectorial. La señal sectorial no convierte automáticamente cada CEDEAR del grupo en compra.</div>';
- return `<div class="detail-top"><span class="eyebrow">${isAsset?'CEDEAR · SUBYACENTE EN USD':'ROTACIÓN Y LIDERAZGO SECTORIAL'}</span><h2>${title}</h2><p>${esc(isAsset?x.sector:'ETF proxy de EE.UU.: '+x.proxy)} · Último cierre confirmado ${day(d.date)}</p><div class="detail-badges">${badge(x.signal,x.tone)} ${badge(d.trend||'SIN TENDENCIA','neutral')} ${badge('SCORE O. '+(d.rank_score??'—')+'/100','hold')}</div><div class="detail-price">${usd(d.price)}<small>del activo en EE.UU., no del CEDEAR en ARS</small></div></div>
+ return `<div class="detail-top"><span class="eyebrow">${isAsset?'CEDEAR · SUBYACENTE EN USD':'ROTACIÓN Y LIDERAZGO SECTORIAL'}</span><h2>${title}</h2><p>${esc(isAsset?x.sector:'ETF proxy de EE.UU.: '+x.proxy)} · ${x.provisional?'PROVISORIO · barra '+esc(x.quote_at||'sin dato'):'Último cierre confirmado '+esc(day(d.date))}</p><div class="detail-badges">${badge(x.signal,x.tone)} ${badge(d.trend||'SIN TENDENCIA','neutral')} ${badge('SCORE O. '+(d.rank_score??'—')+'/100','hold')}</div><div class="detail-price">${usd(d.price)}<small>del activo en EE.UU., no del CEDEAR en ARS</small></div></div>
+ ${tickerChart(d)}
  <div class="detail-metrics"><div class="detail-metric"><label>SMA21 · USD</label><strong>${usd(d.ma21)}</strong><small class="${d.cross_up21?'sma21-up':d.cross_down21?'sma21-down':'muted'}">${esc(d.sma21_state||'Sin lectura')}</small></div>
  <div class="detail-metric"><label>Edad sobre SMA21</label><strong>${d.sma21_age==null?'—':fmt(d.sma21_age)+' ruedas'}</strong></div>
  <div class="detail-metric"><label>Pendiente SMA21 (3r)</label><strong class="${d.sma21_slope_pct3<0?'sma21-down':'sma21-up'}">${d.sma21_slope_pct3==null?'—':fmt(d.sma21_slope_pct3)+'%'}</strong></div>
@@ -133,7 +155,7 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  <div class="detail-metric"><label>MACD hist. · Δ 3r</label><strong class="${d.macd_delta3_pct<0?'sma21-down':'sma21-up'}">${d.macd_delta3_pct==null?'—':fmt(d.macd_delta3_pct)+'% del precio'}</strong></div><div class="detail-metric"><label>SMA20 · USD</label><strong>${usd(d.ma20)}</strong></div><div class="detail-metric"><label>SMA50 · USD</label><strong>${usd(d.ma50)}</strong></div><div class="detail-metric"><label>SMA200 · USD</label><strong>${usd(d.ma200)}</strong></div><div class="detail-metric"><label>RSI14 diario</label><strong>${fmt(d.rsi14d)}</strong></div><div class="detail-metric"><label>MACD hist. D</label><strong>${fmt(d.macd_hist_d)}</strong></div><div class="detail-metric"><label>RSI21 semanal</label><strong>${fmt(d.rsi21w)}</strong></div><div class="detail-metric"><label>RSI21 mensual</label><strong>${fmt(d.rsi21m)}</strong></div><div class="detail-metric"><label>ADX14 diario</label><strong>${fmt(d.adx14)}</strong></div><div class="detail-metric"><label>RS vs SPY (20r)</label><strong>${d.rs_spy20==null?'—':fmt(d.rs_spy20)+' pp'}</strong></div><div class="detail-metric"><label>RS vs QQQ (20r)</label><strong>${d.rs_qqq20==null?'—':fmt(d.rs_qqq20)+' pp'}</strong></div><div class="detail-metric"><label>Volumen confirmado</label><strong>${fmt(d.volume_confirm_score)}/100</strong></div><div class="detail-metric"><label>RVOL20</label><strong>${fmt(d.rvol20)}x</strong></div><div class="detail-metric"><label>Volumen 20r USD</label><strong>${d.dollar_volume20==null?'—':usd(d.dollar_volume20)}</strong></div><div class="detail-metric"><label>OBV (10 ruedas)</label><strong>${d.obv_up10==null?'—':d.obv_up10?'Confirmando':'Sin confirmar'}</strong></div><div class="detail-metric"><label>Extensión / ATR14</label><strong>${fmt(d.stretch_atr20)} ATR</strong></div></div>
  <div class="detail-section"><h3>Por qué aparece esta señal</h3><ul>${what.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>
  <div class="detail-section"><h3>Plan informativo / control de riesgo</h3><p>${esc(plan)}</p><div class="detail-metrics"><div class="detail-metric"><label>Nivel de referencia / soporte</label><strong>${usd(d.ma20)}</strong></div><div class="detail-metric"><label>Invalidación de referencia</label><strong>${usd(d.invalid_usd)}</strong></div><div class="detail-metric" style="grid-column:span 2"><label>Objetivos hipotéticos desde cierre USD</label><strong>${esc(objective)}</strong></div></div><p class="muted">La invalidación es aproximada: revisar estructura 4H/diaria y catalizadores. Los objetivos R son escenarios, no pronósticos.</p></div>
- ${candidateInfo} ${penaltyInfo} ${balanceInfo} ${riskPlan} ${riskNote}<p class="muted" style="font-size:11px">Calidad: último cierre USD ${day(d.date)} · Macroeconomía: ${esc(dataset.macro?.state||'NO VERIFICADO')} · fuente: Yahoo/yfinance.</p>
+ ${candidateInfo} ${spectral?spectrumInfo:penaltyInfo} ${atrInfo} ${balanceInfo} ${riskPlan} ${riskNote}<p class="muted" style="font-size:11px">Calidad: último cierre USD ${day(d.date)} · Macroeconomía: ${esc(dataset.macro?.state||'NO VERIFICADO')} · fuente: Yahoo/yfinance.</p>
  ${isAsset?`<div class="detail-buttons"><button id="trackingButton" class="btn">${tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista'}</button><button id="goSheet" class="btn btn-outline">Ver reglas</button></div>`:''}`;
 }
 function openDetails(type,key){const x=type==='asset'?(dataset.assets||[]).find(v=>v.ticker===key):(dataset.sectors||[]).find(v=>v.sector===key);if(!x)return;selected={type,key};$('detailBody').innerHTML=detailContent(x,type);$('detailModal').showModal();const b=$('trackingButton');if(b)b.onclick=()=>{if(tracked.has(x.ticker))tracked.delete(x.ticker);else tracked.add(x.ticker);try{localStorage.setItem(storeKey,JSON.stringify([...tracked]))}catch(e){}renderHeader();renderTracked();b.textContent=tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista';};if($('goSheet'))$('goSheet').onclick=()=>{ $('detailModal').close();setTab('metodo')};}
@@ -288,22 +310,31 @@ async function loadPaper(){
  renderPaper();
 }
 
-async function load(){dataset=baseline();try{const r=await fetch('./data.json?refresh='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!Array.isArray(j.assets)||!Array.isArray(j.sectors))throw new Error('Formato inválido');
+async function load(){dataset=baseline();const engine=new URLSearchParams(location.search).get('engine');const preview=['spectrum','intraday'].includes(engine);try{const r=await fetch((engine==='intraday'?'./data-intraday.json?refresh=':preview?'./data-spectrum.json?refresh=':'./data.json?refresh=')+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();if(!Array.isArray(j.assets)||!Array.isArray(j.sectors))throw new Error('Formato inválido');
  // Si falla GitHub Actions y el sitio quedó con datos de una ejecución vieja,
  // se BLOQUEAN las señales de compra/venta, no alcanza sólo con un aviso arriba.
  const stamp=Date.parse(j.meta?.generated_at_utc||'');
  const batchStale=!Number.isFinite(stamp)||(Date.now()-stamp)/3600000>36;
  const staleDate=d=>!d||!Number.isFinite(Date.parse(d+'T23:59:59Z'))||(Date.now()-Date.parse(d+'T23:59:59Z'))/86400000>5;
  for(const x of [...j.assets,...j.sectors]){
-   if(batchStale||(x.data&&staleDate(x.data.date))){
+   if(batchStale||(j.meta?.provisional&&(!x.quote_at||Date.now()-Date.parse(x.quote_at)>75*60000))||(x.data&&staleDate(x.data.date))){
      x.signal='DATOS VIEJOS';x.tone='neutral';
      x.reasons=['Señal suspendida: falta una actualización reciente del mercado estadounidense. Revisar GitHub Actions y fecha de cierre USA.'];
    }
  }
+ if(j.meta?.provisional)j.top5=(j.top5||[]).filter(t=>j.assets.some(x=>x.ticker===t.ticker&&x.signal!=='DATOS VIEJOS'));
  if(batchStale||j.assets.every(x=>x.data&&staleDate(x.data.date))){j.top5=[];j.rebounds=[];}
- dataset=j;}catch(e){$('criticalBanner').textContent='Sin datos. Si abriste el archivo local, publicalo en GitHub Pages. Error de lectura: '+e.message;}fillFilters();renderHeader();renderTop5();renderAssets();renderRebounds();renderSectors();renderTracked();}
+ dataset=j;}catch(e){$('criticalBanner').textContent='Sin datos. Si abriste el archivo local, publicalo en GitHub Pages. Error de lectura: '+e.message;}fillFilters();renderHeader();renderTop5();renderAssets();renderRebounds();renderSectors();renderTracked();document.querySelector('main')?.setAttribute('aria-busy','false');if(preview){$('criticalBanner').textContent=(dataset.meta?.unavailable?'Sin observación intradía válida en este horario. ':engine==='intraday'?'PROVISORIO · última barra horaria cerrada; vela diaria en formación. ':'')+'CANDIDATO ESPECTRAL · sin activar. El track record pertenece al motor vigente.';}}
 for(const el of document.querySelectorAll('.tab'))el.onclick=()=>setTab(el.dataset.tab);
 for(const id of ['searchInput','sectorFilter','signalFilter','sortFilter'])$(id).addEventListener(id==='searchInput'?'input':'change',renderAssets);
 $('modalClose').onclick=()=>$('detailModal').close();$('detailModal').addEventListener('click',e=>{if(e.target===$('detailModal'))$('detailModal').close()});
 load();
 loadPaper();
+
+async function loadSignalQuality(){
+ const root=$('signalQuality');if(!root)return;
+ try{const response=await fetch('./signal-quality.json?refresh='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('Sin registro');const data=await response.json();
+ root.innerHTML='<p>Registro iniciado: '+esc(data.started_at)+'. Medición independiente del capital invertido.</p><div class="tablebox"><table><thead><tr><th>Motor</th><th>Ruedas</th><th>Maduras / pendientes</th><th>Retorno</th><th>Exceso vs SPY</th><th>R medio</th></tr></thead><tbody>'+Object.entries(data.summaries||{}).flatMap(([engine,hs])=>Object.entries(hs).map(([h,v])=>'<tr><td>'+esc(engine)+'</td><td>'+esc(h)+'</td><td>'+esc(v.matured)+' / '+esc(v.pending)+'</td><td>'+esc(fmt(v.return))+'%</td><td>'+esc(fmt(v.excess_spy))+' pp</td><td>'+esc(fmt(v.r))+'</td></tr>')).join('')+'</tbody></table></div><p>'+esc(data.note)+'</p>';
+ }catch(e){root.textContent='Medición todavía no disponible. No se inventan señales históricas ni se muestra 0% como resultado.';}
+}
+loadSignalQuality();

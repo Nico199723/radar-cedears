@@ -123,8 +123,8 @@ def last_complete_daily(df: pd.DataFrame, now: datetime) -> pd.DataFrame:
 
 def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
             spy_close: pd.Series | None = None,
-            qqq_close: pd.Series | None = None) -> dict | None:
-    df = last_complete_daily(df, now)
+            qqq_close: pd.Series | None = None, *, provisional=False) -> dict | None:
+    df = df.copy() if provisional else last_complete_daily(df, now)
     if len(df) < 240:
         return None
     c = df["Close"].astype(float)
@@ -143,7 +143,7 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
     vol = float(c.pct_change().tail(20).std() * np.sqrt(252) * 100)
     # Semana completa: sólo viernes cerrado, evita RSI semanal parcial.
     weekly = c.resample("W-FRI").last().dropna()
-    weekly = weekly[weekly.index.date <= date]
+    weekly = weekly[weekly.index.date < date] if provisional else weekly[weekly.index.date <= date]
     rsiW = number(rsi(weekly, 21).iloc[-1], 2) if len(weekly) > 24 else None
     histW = number(macd_hist(weekly, 6, 13, 5).iloc[-1], 4) if len(weekly) > 24 else None
     # Mensual: usar último mes totalmente finalizado.
@@ -202,6 +202,8 @@ def compute(df: pd.DataFrame, now: datetime, is_stock: bool = False,
         "high20":high20,"low20":low20,"near20":near20,"breakout":bool(breakout),
         "invalid_usd":invalid,"target_2r":obj1,"target_3r":obj2,
     }
+    from presentation import price_history
+    result["price_history"] = price_history(df)
     result.update(volumes)
     result.update(sma21)
     result.update(rs)
@@ -499,6 +501,18 @@ def main():
     public_path=ROOT/"docs"/"paper.json"
     public_path.write_text(json.dumps(paper_public,ensure_ascii=False,allow_nan=False),encoding="utf-8")
     OUT.parent.mkdir(parents=True,exist_ok=True)
+    from presentation import methodology
+    result['meta']['methodology'] = methodology()
+    from spectrum_snapshot import apply_snapshot
+    candidate = apply_snapshot(result, frames, now)
+    candidate['meta']['methodology'] = methodology(spectral=True)
+    (ROOT/'docs'/'data-spectrum.json').write_text(
+        json.dumps(candidate, ensure_ascii=False, allow_nan=False), encoding='utf-8')
+    from signal_journal import publish as publish_signal_journal
+    publish_signal_journal({'vigente':result,'espectral':candidate},paper_frames,now,
+                           ROOT/'.cache'/'signals.json',ROOT/'docs'/'signal-quality.json')
+    from provisional_snapshot import publish_provisional
+    publish_provisional(result, frames, now, ROOT/'docs'/'data-intraday.json')
     tmp=OUT.with_suffix('.json.tmp')
     tmp.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False),encoding='utf-8')
     tmp.replace(OUT)

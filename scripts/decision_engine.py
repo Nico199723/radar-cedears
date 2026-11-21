@@ -1,181 +1,110 @@
-"""Motor de señal único CANDIDATO. No se activa en main sin backtest A/B.
-
-Score visible=rank_score: los score técnico y heredado son diagnósticos.
-El riesgo del mercado decide size; nunca descalifica sólo por SPY/QQQ<SMA50.
-"""
-from __future__ import annotations
-import math
+"""Dispatch versionado: A congelada y B espectral, sin activación implícita."""
 from dataclasses import dataclass
 from collections import Counter
+import math
+import decision_engine_legacy as legacy
+from decision_engine_legacy import (BUY_SIGNALS, WATCH_SIGNALS, OPPORTUNITY_SIGNALS,
+    BUY_FLOOR, PRIORITY_FLOOR, REDUCE_FLOOR, EXIT_FLOOR, numeric, is_opportunity)
+import spectrum_config as cfg
+import lectura_espectral as spectrum
 
-RULES_VERSION="2.0-unified-decision-active"
-BUY_FLOOR=70.0
-PRIORITY_FLOOR=75.0
-REDUCE_FLOOR=35.0
-EXIT_FLOOR=18.0
-MIN_DOLLAR_VOLUME=5_000_000.0
-VIX_STRESS_LIMIT=30.0
+RULES_VERSION = legacy.RULES_VERSION if cfg.ACTIVE_ENGINE == 'unified' else cfg.RULES_VERSION
 
-BUY_SIGNALS={"COMPRA CONDICIONAL","COMPRA CON PRECAUCIÓN"}
-WATCH_SIGNALS={"VIGILAR COMPRA · SCORE","VIGILAR COMPRA · GATILLO"}
-OPPORTUNITY_SIGNALS=BUY_SIGNALS|WATCH_SIGNALS
+@dataclass
+class SpectralDecision:
+    reading: spectrum.Reading
 
-
-def is_opportunity(signal:str)->bool:
-    # Capturar también VIGILAR COMPRA legado, no sólo etiquetas nuevas.
-    return signal in BUY_SIGNALS or signal.startswith("VIGILAR COMPRA")
-
-
-@dataclass(frozen=True)
-class Decision:
-    signal:str
-    tone:str
-    score_decision:float|None
-    vetoes:tuple[str,...]
-    gate:str
-    macro:str
-    reasons:tuple[str,...]
-    rules_version:str=RULES_VERSION
-
-    def public(self)->dict:
-        return {"signal":self.signal,"tone":self.tone,
-                "score_decision":self.score_decision,
-                "vetoes":list(self.vetoes),"gate":self.gate,
-                "macro":self.macro,"reasons":list(self.reasons),
-                "rules_version":self.rules_version}
+    @property
+    def signal(self): return self.reading.signal
+    @property
+    def score_decision(self): return self.reading.score
+    @property
+    def vetoes(self): return ()  # Compatibilidad del contrato público; fricciones separadas.
+    def public(self):
+        d = self.reading.public()
+        d.update(tone=('up' if self.signal == 'COMPRA CONDICIONAL' else
+                       'caution' if self.signal == 'COMPRA CON PRECAUCIÓN' else
+                       'watch' if self.signal.startswith('VIGILAR') else
+                       'down' if self.signal.startswith(('REDUCIR','SALIR')) else 'hold'),
+                 vetoes=[], gate=self.reading.stage, reasons=self.reading.narrative,
+                 hard_stops=([self.signal] if self.signal in ('SIN DATOS','NO OPERABLE') else []))
+        return d
 
 
-def numeric(row:dict, field:str)->float|None:
-    try:
-        number=float(row.get(field))
-        return number if math.isfinite(number) else None
-    except (TypeError, ValueError, OverflowError):
-        return None
+def hard_vetoes(row, macro, vix, fresh, earnings=None, *, mode=None):
+    if (mode or cfg.ACTIVE_ENGINE) == 'unified':
+        return legacy.hard_vetoes(row, macro, vix, fresh, earnings)
+    f = (row or {}).get('_spectrum_story')
+    if f is None: return ('SIN HISTÓRICO',)
+    dv = f.get('dollar_volume20')
+    return ('LIQUIDEZ INOPERABLE',) if dv is not None and dv < cfg.HARD_MIN_DOLLAR_VOLUME else ()
 
 
-def hard_vetoes(row:dict, macro:str, vix:float|None,
-                fresh:bool, earnings:dict|None=None)->tuple[str,...]:
-    veto=[]
-    if not fresh:veto.append("CIERRE SIN VIGENCIA")
-    p,ma200,ma21=(numeric(row,k) for k in ("price","ma200","ma21"))
-    if p is None or ma200 is None or p<=ma200:
-        veto.append("PRECIO BAJO SMA200")
-    if p is None or ma21 is None or p<=ma21:
-        veto.append("PRECIO BAJO SMA21")
-    macd=numeric(row,"macd_hist_d")
-    if macd is None or macd<=0:veto.append("MACD DIARIO NO POSITIVO")
-    if (numeric(row,"dollar_volume20") or 0)<MIN_DOLLAR_VOLUME:
-        veto.append("LIQUIDEZ USD INSUFICIENTE")
-    rsi=numeric(row,"rsi14d")
-    if rsi is None or rsi<=35 or rsi>=75:
-        veto.append("RSI DIARIO EXTREMO")
-    if not row.get("rs_verified"):
-        veto.append("RS SPY/QQQ SIN VERIFICAR")
-    week=numeric(row,"macd_hist_w")
-    if week is None or week<0:
-        veto.append("MACD SEMANAL NO CONFIRMADO")
-    if row.get("obv_up10") is not True:
-        veto.append("OBV SIN CONFIRMAR")
-    if macro not in ("FAVORABLE","MIXTO","DEFENSIVO"):
-        veto.append("MACRO SIN VERIFICAR")
-    if vix is None or not math.isfinite(float(vix)) or float(vix)>=VIX_STRESS_LIMIT:
-        veto.append("VIX NO VERIFICADO O >=30")
-    days=(earnings or {}).get("days_until")
-    if isinstance(days,(int,float)) and 0<=days<=7:
-        veto.append("BALANCE EN 7 DIAS")
-    # No añadir un veto por SPY/QQQ bajo SMA50: se reduce el tamaño.
-    return tuple(veto)
+def decide(row, macro, vix, fresh, earnings=None, *, mode=None, wind=None):
+    mode = mode or cfg.ACTIVE_ENGINE
+    if mode == 'unified':
+        return legacy.decide(row, macro, vix, fresh, earnings)
+    if mode != 'spectrum': raise ValueError('Motor desconocido: '+mode)
+    reading = spectrum.read_story((row or {}).get('_spectrum_story'), wind,
+                                 (earnings or {}).get('days_until'), fresh)
+    # Este es el único score público; técnico y rank heredado quedan diagnósticos.
+    if row is not None:
+        row['rank_score'] = reading.score
+        row['score_decision'] = reading.score
+        row['spectrum'] = reading.public()
+    return SpectralDecision(reading)
 
 
-def decide(row:dict|None, macro:str, vix:float|None,
-           fresh:bool, earnings:dict|None=None)->Decision:
-    if row is None:
-        return Decision("SIN DATOS","neutral",None,("SIN HISTÓRICO",),"",macro,("Falta histórico",))
-    score=numeric(row,"rank_score")
-    if score is not None:
-        # El umbral usa el valor exacto, no redondear 69.99 a 70.
-        score=max(0,min(100,score))
-    veto=hard_vetoes(row,macro,vix,fresh,earnings)
-    if not fresh:
-        return Decision("DATOS VIEJOS","neutral",score,veto,"",macro,("Último cierre no vigente",))
-    if score is None:
-        return Decision("SIN DATOS","neutral",None,veto,"",macro,("Score de decisión no calculable",))
-    p,m50,m200=(numeric(row,k) for k in ("price","ma50","ma200"))
-    macd=numeric(row,"macd_hist_d")
-    rsi=numeric(row,"rsi14d")
-    # Riesgo de tenencia prevalece sobre el score: los vetos sólo bloquean nuevas compras.
-    if (score<=EXIT_FLOOR or
-        (p is not None and m200 is not None and p<m200 and
-         macd is not None and macd<0 and rsi is not None and rsi<40)):
-        return Decision("SALIR / EVITAR","down",score,veto,"",macro,("Invalidación estructural o score crítico",))
-    if (score<=REDUCE_FLOOR or
-        (p is not None and m50 is not None and p<m50 and
-         macd is not None and macd<0 and rsi is not None and rsi<48)):
-        return Decision("REDUCIR / EVITAR","down",score,veto,"",macro,("Deterioro técnico; priorizar reducción",))
-    if veto:
-        signal="SCORE ALTO · VETADO" if score>=BUY_FLOOR else "HOLD / ESPERAR"
-        return Decision(signal,"hold",score,veto,"",macro,
-                        ("Score alto no habilita compra frente a veto: "+", ".join(veto),))
-    if score<BUY_FLOOR:
-        return Decision("HOLD / ESPERAR","hold",score,(),"",macro,
-                        (f"Score {score:.1f} < mínimo {BUY_FLOOR:g}",))
-    # Gatillos son puertas de ejecución, separadas del puntaje.
-    trigger=("CRUCE SMA21" if row.get("cross_up21") else
-             "RETROCESO SMA20" if row.get("near20") else
-             "RUPTURA CON VOLUMEN" if row.get("breakout") else "")
-    if not trigger and score<PRIORITY_FLOOR:
-        return Decision("VIGILAR COMPRA · GATILLO","watch",score,(),"PENDIENTE",macro,
-                        ("Score suficiente; esperar gatillo concreto",))
-    if not trigger and score>=PRIORITY_FLOOR:
-        trigger="PRIORIDAD >=75 / CONTINUACIÓN CONTROLADA"
-    if macro=="FAVORABLE" and score<PRIORITY_FLOOR and trigger:
-        return Decision("COMPRA CONDICIONAL","up",score,(),trigger,macro,
-                        ("Entrada condicionada con macro favorable; no orden real",))
-    # Si el setup es sólo por score elevado o la macro es defensiva,
-    # se permite exclusivamente en tamaño reducido.
-    return Decision("COMPRA CON PRECAUCIÓN","caution",score,(),trigger,macro,
-                    ("Capital reducido; stop condicionado y ejecución t+1",))
-
-
-def audit_consistency(assets:list[dict], *, require_score:bool=True)->list[dict]:
-    """Un solo origen de verdad. Fallar cerrado si hay compras incoherentes.
-
-    Se aplica a la variante A/B antes de tocar producción. La ficha
-    debe declarar los vetoes que justifican una ausencia de entrada.
-    """
-    violations=[]
+def audit_consistency(assets, *, require_score=True, mode=None):
+    if (mode or cfg.ACTIVE_ENGINE) == 'unified':
+        return legacy.audit_consistency(assets, require_score=require_score)
+    errors=[]
     for a in assets:
-        ticker=a.get("ticker") or a.get("usa") or "?"
-        signal=a.get("signal","")
-        data=a.get("data") or {}
-        score=a.get("score_decision",data.get("rank_score"))
-        vetoes=tuple(a.get("vetoes") or ())
-        if require_score and score is None and is_opportunity(signal):
-            violations.append({"ticker":ticker,"reason":"opportunity_without_score"})
+        d=a.get('data') or {}; r=d.get('spectrum') or a
+        score=d.get('rank_score'); shown=a.get('score_decision'); sig=a.get('signal')
+        def fail(reason): errors.append({'ticker':a.get('ticker',a.get('proxy','?')), 'reason':reason})
+        if sig in ('SIN DATOS','NO OPERABLE','DATOS VIEJOS'):
+            if score is not None or shown is not None: fail('unavailable_with_score')
+            if r.get('size_mult',0)!=0: fail('unavailable_with_size')
             continue
-        if is_opportunity(signal) and score is not None and score<BUY_FLOOR:
-            violations.append({"ticker":ticker,"reason":"opportunity_below_floor",
-                               "score":score})
-        if is_opportunity(signal) and vetoes:
-            violations.append({"ticker":ticker,"reason":"opportunity_with_hard_veto",
-                               "vetoes":list(vetoes)})
-        if score is not None and score>=BUY_FLOOR and vetoes and is_opportunity(signal):
-            violations.append({"ticker":ticker,"reason":"high_score_veto_marked_opportunity"})
-        if signal=="SCORE ALTO · VETADO" and not vetoes:
-            violations.append({"ticker":ticker,"reason":"veto_label_without_veto"})
-        expected=data.get("rank_score")
-        if score is not None and expected is not None and abs(float(score)-float(expected))>.011:
-            violations.append({"ticker":ticker,"reason":"display_vs_decision_mismatch"})
-        # El score técnico o el heredado NO pueden reemplazar rank_score.
-    return violations
+        det=r.get('deterioration')
+        if not all(isinstance(v,(float,int)) and math.isfinite(v) for v in (score,shown,det)):
+            fail('missing_or_nonfinite_score');continue
+        if score != shown or score != r.get('score_decision'): fail('display_vs_decision_mismatch')
+        if not 0<=score<=100: fail('score_out_of_range')
+        if spectrum.signal_for(score,det)!=sig: fail('signal_vs_spectrum_mismatch')
+        if a.get('vetoes'): fail('obsolete_veto')
+    return errors
 
 
-def top_five_by_decision(assets:list[dict],limit:int=5)->list[dict]:
-    """Top5 ordenado estrictamente por el mismo score que decide."""
-    pool=[x for x in assets if x.get("signal") in OPPORTUNITY_SIGNALS
-          and not x.get("vetoes") and x.get("score_decision") is not None
-          and x["score_decision"]>=BUY_FLOOR]
-    pool.sort(key=lambda x:(-float(x["score_decision"]),x.get("ticker","")))
-    return [{"ticker":x.get("ticker"),"usa":x.get("usa"),
-             "score_decision":x["score_decision"],"signal":x["signal"]}
-            for x in pool[:limit]]
+def top_five_by_decision(assets, limit=5, *, mode=None):
+    if (mode or cfg.ACTIVE_ENGINE)=='unified': return legacy.top_five_by_decision(assets,limit)
+    if limit<=0:return []
+    pool=[a for a in assets if numeric(a.get('data') or {},'rank_score') is not None
+          and a.get('usa') and a.get('signal') not in ('SIN DATOS','NO OPERABLE','DATOS VIEJOS')]
+    pool.sort(key=lambda a:(-a['data']['rank_score'],a.get('ticker','')))
+    selected=[]; deferred=[]; counts=Counter(); seen=set()
+    # Diversificar primero; relajar el cupo para llenar los lugares restantes.
+    for a in pool:
+        if a['usa'] in seen:continue
+        seen.add(a['usa'])
+        if counts[a.get('sector')]<cfg.SECTOR_SOFT_CAP and len(selected)<limit:
+            selected.append(a);counts[a.get('sector')]+=1
+        else:deferred.append(a)
+    for a in deferred:
+        if len(selected)>=limit:break
+        selected.append(a)
+    selected.sort(key=lambda a:(-a['data']['rank_score'],a.get('ticker','')))
+    out=[]; counts=Counter()
+    for a in selected:
+        d=a['data']; counts[a.get('sector')]+=1
+        fallback=d['rank_score']<cfg.BAND_CAUTION
+        caution_exit=a['signal'].startswith(('REDUCIR','SALIR'))
+        tag=('MEJOR DISPONIBLE · BAJO BANDA DE PRECAUCIÓN' if fallback else 'LECTURA ESPECTRAL')
+        if caution_exit:tag+=' · DETERIORO: NO ES COMPRA'
+        if counts[a.get('sector')]>cfg.SECTOR_SOFT_CAP:tag+=' · CUPO SECTORIAL RELAJADO'
+        out.append({**d, **{k:a.get(k) for k in ('ticker','usa','sector','signal','tone','earnings')},
+                    'score_decision':d['rank_score'], 'tag':tag,'fallback':fallback,
+                    'relative_spy20':d.get('rs_spy20'),'relative_qqq20':d.get('rs_qqq20'),
+                    **(d.get('spectrum') or {})})
+    return out
