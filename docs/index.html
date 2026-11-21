@@ -13,15 +13,16 @@
 <body>
   <header class="topbar">
     <div class="brand"><span class="brand-mark">R<span class="brand-pip">·</span></span><span>RADAR <b>CEDEARs</b><small>USA / USD · Señales técnicas</small></span></div>
-    <div class="top-actions"><span class="live-indicator" id="liveIndicator"><i></i> Sin actualización</span><a class="linkbutton" href="https://www.byma.com.ar/productos/productos-financieros/cedears" rel="noopener noreferrer" target="_blank">BYMA oficial ↗</a></div>
+    <div class="top-actions"><span class="live-indicator" id="liveIndicator"><i></i> Cargando datos…</span><a class="linkbutton" href="https://www.byma.com.ar/productos/productos-financieros/cedears" rel="noopener noreferrer" target="_blank">BYMA oficial ↗</a></div>
   </header>
-  <main class="layout">
+  <main aria-busy="true" class="layout">
     <section class="hero">
       <div class="eyebrow">SCREENER OPERATIVO · MERCADO ESTADOUNIDENSE</div>
       <h1>¿Qué está para <em>comprar</em>, <em>esperar</em> o <em>reducir</em>?</h1>
       <p>Señales calculadas exclusivamente con el <strong>subyacente de EE.UU. en dólares</strong>. El CEDEAR argentino es el vehículo para operar, no el precio usado para medir tendencia.</p>
       <div class="hero-foot"><span class="smalltag">Cada hora de 10:30 a 18:30 ARG · todos los días</span><span class="smalltag" id="heroLast">Esperando primer corte</span></div>
     </section>
+    <p class="engine-selector"><a href="?engine=active">Motor vigente</a> · <a href="?engine=spectrum">Ver candidato espectral (no opera el simulador)</a> · <a href="?engine=intraday">Observación intradía provisoria</a></p>
     <section id="criticalBanner" class="critical" role="status">Cargando estado de datos…</section>
     <section class="summary" aria-label="Resumen de mercado">
       <div class="stat"><span class="stat-label">CONTEXTO SPY / QQQ</span><strong id="macroValue">—</strong><small id="macroSub">Filtro macro global</small></div>
@@ -33,27 +34,14 @@
       <div class="block-head">
         <div><span class="eyebrow">VOLUMEN · FORTALEZA · RIESGO MACRO</span>
           <h2 id="top5Title">Top 5 para estudiar</h2>
-          <p class="top5-desc">Ranking de acciones y ETFs en USD: 30% fuerza relativa SPY/QQQ, 20% volumen confirmado, SMA21 (20% acciones / 15% ETFs) y técnico. Penaliza RSI extremo, pérdida de pendiente y precio bajo SMA200.</p>
+          <p class="top5-desc" id="rankingDescription">Ranking de acciones y ETFs en USD: 30% fuerza relativa SPY/QQQ, 20% volumen confirmado, SMA21 (20% acciones / 15% ETFs) y técnico. Penaliza RSI extremo, pérdida de pendiente y precio bajo SMA200.</p>
         </div>
         <span class="muted" id="top5Generated">Sin corte válido</span>
       </div>
       <div class="top5-grid" id="top5Cards"><p class="muted">Cargando el último corte...</p></div>
       <p class="top5-note">No es una orden de operar: un papel puede liderar el ranking y todavía no tener gatillo. La señal de compra debe validarse en diario/4H, con riesgo e invalidación.</p>
     </section>
-    <aside class="martin-card" aria-labelledby="martinTitle">
-      <div class="martin-heading">
-        <div class="martin-heading-text">
-          <span class="martin-eyebrow">HUMOR DE MERCADO · EDICIÓN ASTS</span>
-          <h2 id="martinTitle">Las máximas de Martín <span aria-hidden="true">🚀</span></h2>
-        </div>
-        <span class="martin-count" id="martinCount" aria-label="Frase 1 de 12">01 / 12</span>
-      </div>
-      <p class="martin-quote" id="martinQuote" aria-live="off">«Martín compró ASTS para ir a la Luna. El -40% lo dejó en el subsuelo.»</p>
-      <div class="martin-bottom">
-        <span>Chistes entre amigos; no son señales de trading.</span>
-        <button type="button" class="martin-next" id="martinNext" aria-label="Ver otra máxima de Martín">Otra máxima ↻</button>
-      </div>
-    </aside>
+
     <nav class="tabs" aria-label="Vistas del radar">
       <button class="tab active" data-tab="acciones" aria-current="page">Acciones y ETFs</button>
       <button class="tab" data-tab="sectores">Radar sectorial</button>
@@ -70,10 +58,10 @@
         <label class="filter"><span>Señal</span><select id="signalFilter"><option value="">Todas las señales</option><option value="compra">Compras (verdes)</option><option value="vigilancia">Candidatas a vigilar</option><option value="esperar">HOLD / ESPERAR</option><option value="venta">Reducir / salir</option><option value="sindatos">Sin datos</option></select></label>
         <label class="filter"><span>Ordenar</span><select id="sortFilter"><option value="score">Mayor Score de decisión</option><option value="priority">Agrupar por tipo de señal</option><option value="worst">Menor Score Oportunidad</option><option value="ticker">Ticker A–Z</option><option value="signal">Señal de acción</option></select></label>
       </div>
-      <div class="tablebox"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>SMA21 D</th><th>RSI14 D</th><th>MACD D</th><th>Score decisión</th><th>RVOL20</th><th>Balance</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="10">Esperando datos del primer workflow…</td></tr></tbody></table></div>
+      <div id="assetCards" class="asset-mobile"></div><div class="tablebox asset-desktop"><table><thead><tr><th>CEDEAR / USA</th><th>Precio USA USD</th><th>SMA21 D</th><th>RSI14 D</th><th>MACD D</th><th>Score decisión</th><th>RVOL20</th><th>Balance</th><th>Tendencia</th><th>Decisión técnica</th></tr></thead><tbody id="assetRows"><tr><td colspan="10">Esperando datos del primer workflow…</td></tr></tbody></table></div>
       <div class="footline"><span>Hacé clic en cualquier fila para ver la tesis, gatillo, invalidación y objetivos.</span><span>Los datos son al último cierre diario confirmado; nunca a precio CEDEAR ARS.</span></div>
     </section>
-      <p class="top5-note"><strong>Semáforo de oportunidades:</strong> desde 62/100, vigilancia; desde 75/100, candidata prioritaria para estudiar. Sólo COMPRA CONDICIONAL y COMPRA CON PRECAUCIÓN cuentan como compra. El puntaje es continuo, no dispara órdenes ni elimina el riesgo.</p>
+      <p class="top5-note" id="methodSummary">Cargando reglas del corte… COMPRA CONDICIONAL / COMPRA CON PRECAUCIÓN.</p>
     <section id="pageRebotes" class="page hidden">
       <div class="block-head"><div><span class="eyebrow">ESTRATEGIA EXPERIMENTAL · CONTRA-TENDENCIA</span>
         <h2>🥔 La papa está en el piso</h2></div><strong class="rebound-risk">ALTO RIESGO · CONTRA-TENDENCIA</strong></div>
@@ -107,6 +95,8 @@
         <div class="paper-stat"><span>Máximo drawdown</span><strong id="paperDD">—</strong><small>Mayor caída desde un máximo registrado</small></div>
       </div>
       <div class="paper-graph" id="paperGraph"></div>
+      <details class="signal-quality"><summary>Calidad de las señales · R y comparación contra SPY</summary><div id="signalQuality">Cargando medición independiente…</div></details>
+
       <h3 class="paper-subtitle">Órdenes para la próxima apertura</h3>
       <div class="tablebox"><table><thead><tr><th>Señal al cierre</th><th>Activo</th><th>Acción prevista</th><th>Motivo</th></tr></thead><tbody id="paperPending"><tr><td colspan="4">Sin órdenes pendientes.</td></tr></tbody></table></div>
       <h3 class="paper-subtitle">Posiciones abiertas</h3>
@@ -122,7 +112,7 @@
           <li>Compras de a partes: 40% / 35% / 25%. Los importes pendientes son máximos orientativos, sujetos a efectivo y límites al ejecutar.</li>
           <li>Ventas parciales del 50% en 2R o por debilidad; el remanente sigue con stop móvil. Stop o ruptura estructural liquidan todo el remanente.</li>
           <li>Mercado favorable: hasta US$ 250 por posición, reserva del 50% y stop del 8%.</li>
-          <li>Mercado mixto o defensivo: hasta US$ 120 por posición, reserva del 70%, stop del 6% y máximo 2 posiciones. Los ETFs apalancados tienen límites más estrictos.</li>
+          <li>Mercado mixto o defensivo: hasta US$ 120 por posición, reserva 70%, stop del 6% y máximo 2 posiciones. Los ETFs apalancados tienen límites más estrictos.</li>
           <li>Ejecución al OPEN siguiente: comisión del 0,05% y slippage del 0,10% por lado. Los gaps pueden provocar pérdidas superiores al stop.</li>
           <li>Acierto calculado sobre operaciones completamente cerradas; se muestra desde 10 cierres. Las ventas parciales se cuentan aparte.</li>
         </ul>
@@ -136,9 +126,9 @@
       <article><h3>Volumen y balances</h3><p>Score Oportunidad: 30% RS frente a SPY/QQQ; 20% volumen confirmado por precio y OBV; SMA21 20% en acciones/15% en ETFs; base técnica 30%/35%. Se descuentan puntos por RSI extremo, precio bajo SMA200 y pérdida de pendiente diaria de RSI/MACD, aunque sigan positivos. RVOL20 usa el promedio de las 20 ruedas anteriores. Las fechas de balance salen de calendarios gratuitos (Nasdaq por día y Yahoo como respaldo) y son indicativas: alerta a 14 y 7 días, se muestra la fecha conocida aunque esté lejos, y una fecha no encontrada (s/f) nunca se interpreta como ausencia de balance. Los ETF no publican balances.</p></article>
       <article><h3>Top 5 para estudiar</h3><p>Ranking de acciones y ETFs con RS 20 ruedas vs SPY/QQQ, volumen inusual confirmado, penalizaciones y diversificación sectorial. Los scores son informativos y no cambian las señales originales. No equivale a cinco compras habilitadas y puede incluir papeles sin gatillo.</p></article>
       <article><h3>HOLD / ESPERAR</h3><p>Unifica los anteriores estados «Esperar» y «Mantener / esperar», incluso cuando el filtro macro bloquea entradas. No indica mantener una posición particular: hay que revisar tesis, precio de entrada y riesgo.</p></article>
-      <article><h3>La compra no es un score</h3><p>Compra normal: tendencia alcista, score ≥73, RSI14 diario 46–70, histograma MACD positivo, macro favorable y gatillo. Compra CON PRECAUCIÓN también en acciones y ETFs, aunque SPY/QQQ caigan bajo SMA50, si el activo supera SMA21/50/200, RSI/MACD diario y semanal acompañan, demuestra fuerza relativa contra SPY/QQQ y volumen/OBV, sin sobreextensión en ATR.</p></article>
-      <article><h3>Macro que habilita</h3><p>La macro decide el TAMAÑO, no prohíbe todas las compras. Si SPY/QQQ están debajo de SMA50, sólo se habilitan setups de COMPRA CON PRECAUCIÓN: simulador con US$ 120 máximo por posición, stop 6%, reserva 70%, máximo 2 posiciones y una por sector. En favorable: US$ 250, stop 8%, reserva 50%. Datos macro no verificables o VIX ≥30 bloquean nuevas compras. No implica orden real ni rentabilidad demostrada por backtest.</p></article>
-      <article><h3>Salida técnica</h3><p>REDUCIR si se debilita la estructura por debajo de SMA50 con RSI/MACD negativos; SALIR / EVITAR si cae debajo de SMA200, RSI &lt;40 y MACD negativo. No implica orden automática ni reemplaza el contexto de tu posición.</p></article>
+      <article><h3>Motor de señales</h3><p id="methodRules">Cargando configuración…</p></article>
+      <article><h3>Contexto macro</h3><p id="methodMacro">Cargando configuración…</p></article>
+      <article><h3>Salida técnica</h3><p>Revisá las reglas del motor seleccionado y los motivos de la ficha. REDUCIR / SALIR describe deterioro técnico; no implica una orden ni reemplaza el contexto de tu posición.</p></article>
       <article><h3>Indicadores y marcos</h3><p>SMA20/50/200; RSI14 diario, RSI21 semanal y mensual; MACD 12/26/9 diario y 6/13/5 semanal/mensual; momentum 20, volatilidad, ADX14. El semanal usa semanas cerradas y el mensual meses completos. Koncorde no está automatizado en esta versión.</p></article>
       <article><h3>Entrada en tramos y riesgo</h3><p>Plan orientativo: 40% / 35% / 25%, condicionado a liquidez y concentración que no están sincronizadas. Objetivos teóricos de 2R y 3R cuando hay invalidación razonable. Para opciones GGAL rigen restricciones aparte: este motor no produce señales de opciones.</p></article>
       <article><h3>Validación BYMA</h3><p>La lista es un catálogo inicial curado (no inventario oficial total). Antes de operar hay que confirmar emisión vigente, ratio, ticker, volumen y spread en BYMA. La web muestra el subyacente en dólares y no calcula conversión CEDEAR/CCL.</p></article>
@@ -146,6 +136,20 @@
       <p class="method-disclaimer">Fuente: Yahoo Finance vía yfinance (uso personal y educativo, sujeta a demoras y fallas). Hechos = precios e indicadores del dataset; interpretación = reglas mecánicas; escenario = entrada e invalidación hipotéticas. No incluye fundamentales automatizados ni ejecución de órdenes.</p>
     </section>
   </main>
+    <aside class="martin-card" aria-labelledby="martinTitle">
+      <div class="martin-heading">
+        <div class="martin-heading-text">
+          <span class="martin-eyebrow">HUMOR DE MERCADO · EDICIÓN ASTS</span>
+          <h2 id="martinTitle">Las máximas de Martín <span aria-hidden="true">🚀</span></h2>
+        </div>
+        <span class="martin-count" id="martinCount" aria-label="Frase 1 de 12">01 / 12</span>
+      </div>
+      <p class="martin-quote" id="martinQuote" aria-live="off">«Martín compró ASTS para ir a la Luna. El -40% lo dejó en el subsuelo.»</p>
+      <div class="martin-bottom">
+        <span>Chistes entre amigos; no son señales de trading.</span>
+        <button type="button" class="martin-next" id="martinNext" aria-label="Ver otra máxima de Martín">Otra máxima ↻</button>
+      </div>
+    </aside>
   <footer class="footer"><span>RADAR CEDEARs · Motor técnico USD · Sin órdenes automáticas</span><span id="footerSource">Datos pendientes</span></footer>
   <dialog id="detailModal" class="modal"><button class="modal-close" id="modalClose" aria-label="Cerrar">×</button><div id="detailBody"></div></dialog>
   <script src="app.js" defer></script>
