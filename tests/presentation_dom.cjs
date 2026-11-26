@@ -24,7 +24,7 @@ function boot({fail=false}={}){
  w.fetch=async url=>{if(url.startsWith('./data.json')){await dataGate;if(fail)throw new Error('red caída');return response(fixture);}
   if(url.startsWith('./paper.json'))return {ok:false,status:404};
   return new Promise(resolve=>requests.push({url,resolve}));};
- w.addEventListener('error',e=>errors.push(e.error));w.eval(source+"\nwindow.radarTest={openDetails,visibleScore,badge};");
+ w.addEventListener('error',e=>errors.push(e.error));w.eval(source+"\nwindow.radarTest={openDetails,visibleScore,badge,scoreHistorySVG,loadScoreHistory};");
  return {dom,w,errors,requests,resolveData};
 }
 (async()=>{
@@ -70,6 +70,30 @@ function boot({fail=false}={}){
  assert(!/data\??\.score\b/.test(trackedCode));
  assert.equal(w.radarTest.visibleScore({score_decision:0,data:{rank_score:99}}),0);
  assert.equal(w.radarTest.visibleScore({data:{rank_score:12,score:4}}),12);
+ const history={points:[{date:'2026-11-24',score:4,version:'v1',signal:'HOLD'},{date:'2026-11-25',score:0,version:'v1',signal:'HOLD'}]};
+ const scoreHost=()=>d.getElementById('scoreHistory');
+ w.radarTest.loadScoreHistory({score_history_file:'assets-NVDA.json'});
+ assert(requests[3].url.startsWith('./scores/assets-NVDA.json?v='));
+ w.radarTest.openDetails('asset','AMD');
+ requests[3].resolve(response(history));await tick();
+ assert(!scoreHost().querySelector('svg'),'stale history must not overwrite another asset');
+ w.radarTest.loadScoreHistory({score_history_file:'assets-AMD.json'});
+ requests[5].resolve(response(history));await tick();
+ assert(scoreHost().querySelector('svg'));
+ assert(scoreHost().textContent.includes('↓ -4 puntos'));
+ const scoreTip=scoreHost().querySelectorAll('[data-score-tip]')[1];scoreTip.dispatchEvent(new w.Event('focus'));
+ assert(scoreHost().querySelector('.score-tooltip').textContent.includes('Score 0/100'));
+ const discontinuous=structuredClone(history);discontinuous.points[1].version='v2';
+ const markup=w.radarTest.scoreHistorySVG(discontinuous);
+ const parsed=new JSDOM(markup);
+ assert(!parsed.window.document.querySelector('[data-score-line]').getAttribute('d').includes('L'),'version changes break the line');parsed.window.close();
+ assert(markup.includes('Sin variación comparable'));
+ assert(w.radarTest.scoreHistorySVG({points:[history.points[1]]}).includes('<circle'));
+ assert(w.radarTest.scoreHistorySVG({points:[]}).includes('Todavía no hay observaciones'));
+ assert.throws(()=>w.radarTest.scoreHistorySVG({points:[{...history.points[0],score:NaN}]}));
+ w.radarTest.loadScoreHistory({score_history_file:'assets-AMD.json'});requests[6].resolve({ok:false,status:404});await tick();
+ assert.equal(scoreHost().textContent,'Historial no disponible en este corte');
+ assert(d.querySelector('[role="meter"]').getAttribute('aria-valuenow')==='10');
  assert.deepEqual(errors,[]);dom.window.close();
  const failed=boot({fail:true});failed.resolveData();await tick();await tick();
  assert(!failed.w.document.body.classList.contains('is-loading'));

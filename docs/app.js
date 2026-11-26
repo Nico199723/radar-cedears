@@ -110,15 +110,16 @@ function detailContent(x,type){const d=x.data||{},ticker=type==='sector'?x.proxy
  if(group(x.signal)==='compra')plan='Entrada eventual en 3 tramos 40% / 35% / 25%, sólo tras confirmar reacción, volumen y concentración de cartera.';
  if(x.signal==='COMPRA CON PRECAUCIÓN')plan='Compra con precaución. Política simulada: '+policyText(x.risk_plan_paper||ruleValue('policy_prudent'))+'. Entradas en partes con confirmación. Los gaps pueden superar el stop.';
  const earnings=upcomingEarnings(x);
- const balanceInfo=isAsset?'<div class="detail-note"><strong>Próximo balance:</strong> '+(earnings ? esc(day(earnings.date)+(earnings.time_label?' · '+earnings.time_label:'')+' (dentro de '+earnings.days_until+' días) — '+earnings.status) : esc(x.earnings_status||'Fecha sin verificar'))+'. Fuente: '+esc(earnings?earnings.source+(earnings.stale?' · dato de caché de '+earnings.cache_age_days+' días':''):'calendarios gratuitos (Nasdaq y Yahoo Finance)')+'; fecha indicativa, contrastar en IR. No es un bloqueo automático.</div>':'';
- const status=x.candidate||{};
- const candidateInfo='<div class="detail-note"><strong>Elegibilidad:</strong> '+esc(status.level||'Sin clasificación')+' · vigilancia desde '+fmt(ruleValue('thresholds.watch'))+'; compra desde '+fmt(ruleValue('thresholds.buy'))+' con filtros; prioridad desde '+fmt(ruleValue('thresholds.priority'))+'. <strong>Condiciones pendientes:</strong> '+esc((status.blockers||[]).join(' · ')||'ninguna identificada')+'. El puntaje no es una orden de compra.</div>';
+ const balanceInfo=isAsset?'<div class="detail-note"><strong>Próximo balance:</strong> '+(earnings ? esc(day(earnings.date)+(earnings.time_label?' · '+earnings.time_label:'')+' (dentro de '+earnings.days_until+' días) — '+earnings.status) : esc(x.earnings_status||'Fecha sin verificar'))+'. Fuente: '+esc(earnings?earnings.source+(earnings.stale?' · dato de caché de '+earnings.cache_age_days+' días':''):'calendarios gratuitos (Nasdaq y Yahoo Finance)')+'; fecha indicativa, contrastar en IR. Consultá las condiciones pendientes del motor vigente.</div>':'';
+ const candidateInfo='<div class="detail-note"><strong>Elegibilidad del motor vigente:</strong> '+esc(signalLabel(x.signal))+' · vigilancia desde '+fmt(ruleValue('thresholds.watch'))+'; compra desde '+fmt(ruleValue('thresholds.buy'))+' con filtros; prioridad desde '+fmt(ruleValue('thresholds.priority'))+'. <strong>Condiciones pendientes:</strong> '+esc((x.vetoes||[]).join(' · ')||'sin vetos; revisar el gatillo indicado en la señal')+'. El puntaje ordena oportunidades; el gatillo y el riesgo definen la posibilidad de entrada.</div>';
  const penaltyInfo='<details class="detail-note score-diagnostic"><summary>Diagnóstico del score</summary><p>Score técnico anterior: '+fmt(d.score)+' · Score habilitación vigente (criterio previo): '+fmt(d.rank_score_signal)+'. Valores diagnósticos; no son el puntaje visible.</p><p>Penalizaciones: '+esc((d.rank_penalty_reasons||[]).join(' · ')||'ninguna')+' · descuento '+fmt(d.rank_penalty)+' puntos.</p></details>';
  const rp=x.risk_plan_paper;
  const riskPlan=isAsset&&rp?'<div class="detail-note"><strong>Régimen de exposición SIMULADA:</strong> '+esc(rp.mode)+' · posición máxima '+usd(rp.max_position_usd)+' · reserva '+fmt(rp.reserve_pct)+'% · stop de referencia '+(rp.stop_pct==null?'sin nuevas compras':fmt(rp.stop_pct)+'%')+'. No es una instrucción a tu broker.</div>':'';
  const objective=d.target_2r!=null?`${usd(d.target_2r)} (2R) · ${usd(d.target_3r)} (3R)`:'No definido: la relación riesgo/beneficio aún no es adecuada.';
  const riskNote=isAsset?`<div class="detail-note"><strong>Operabilidad BYMA pendiente:</strong> este motor NO certifica ratio, listado vigente, liquidez, spread ni disponible en Bull/IOL. Confirmá <a class="mini-link" target="_blank" rel="noopener noreferrer" href="https://www.byma.com.ar/productos/productos-financieros/cedears">el PDF oficial de BYMA</a> antes de cualquier orden. Los indicadores son del subyacente USA en USD.</div>`:'<div class="detail-note">El ETF es proxy de fortaleza sectorial. La señal sectorial no convierte automáticamente cada CEDEAR del grupo en compra.</div>';
  return `<div class="detail-top"><span class="eyebrow">${isAsset?'CEDEAR · SUBYACENTE EN USD':'ROTACIÓN Y LIDERAZGO SECTORIAL'}</span><h2>${title}</h2><p>${esc(isAsset?x.sector:'ETF proxy de EE.UU.: '+x.proxy)} · Último cierre confirmado ${day(d.date)}</p><div class="detail-badges">${badge(x.signal,x.tone)} ${badge(d.trend||'SIN TENDENCIA','neutral')} <span class="score-label">Score ${esc(visibleScore(x)??'—')}/100</span></div><div class="detail-price">${usd(d.price)}<small>del activo en EE.UU., no del CEDEAR en ARS</small></div></div>
+ ${scoreSpectrum(x)}
+ <section class="score-history-panel"><h3>Evolución del puntaje</h3><div id="scoreHistory" aria-live="polite">Cargando historial del puntaje…</div></section>
  <section id="priceChart" class="price-chart" aria-live="polite">Cargando gráfico…</section>
  <div class="detail-metrics"><div class="detail-metric"><label>SMA21 · USD</label><strong>${usd(d.ma21)}</strong><small class="${d.cross_up21?'sma21-up':d.cross_down21?'sma21-down':'muted'}">${esc(d.sma21_state||'Sin lectura')}</small></div>
  <div class="detail-metric"><label>Edad sobre SMA21</label><strong>${d.sma21_age==null?'—':fmt(d.sma21_age)+' ruedas'}</strong></div>
@@ -173,7 +174,62 @@ async function loadChart(asset,type){
  }catch(e){if(current())host.textContent='Gráfico no disponible en este corte';}
 }
 
-function openDetails(type,key){const x=type==='asset'?(dataset.assets||[]).find(v=>v.ticker===key):(dataset.sectors||[]).find(v=>v.sector===key);if(!x)return;selected={type,key};$('detailBody').innerHTML=detailContent(x,type);$('detailModal').showModal();loadChart(x,type);const b=$('trackingButton');if(b)b.onclick=()=>{if(tracked.has(x.ticker))tracked.delete(x.ticker);else tracked.add(x.ticker);try{localStorage.setItem(storeKey,JSON.stringify([...tracked]))}catch(e){}renderHeader();renderTracked();b.textContent=tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista';};if($('goSheet'))$('goSheet').onclick=()=>{ $('detailModal').close();setTab('metodo')};}
+let scoreRequest=0;
+function scoreHistorySVG(data){
+ const points=data?.points;
+ if(!Array.isArray(points)||points.length>90)throw new Error('Historial inválido');
+ if(!points.length)return '<p>El historial comienza con el primer cierre disponible. Todavía no hay observaciones.</p>';
+ const valid=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=100;
+ if(!points.every(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.date)&&typeof p.version==='string'&&typeof p.signal==='string'&&(p.score===null||valid(p.score))))throw new Error('Puntajes inválidos');
+ const W=800,H=220,L=42,R=24,T=18,B=32,n=points.length;
+ const x=i=>n===1?(W+L-R)/2:L+i*(W-L-R)/(n-1),y=v=>T+(100-v)*(H-T-B)/100;
+ let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del puntaje observado, escala de 0 a 100"><title>Puntajes observados; las versiones de reglas no se unen</title>`;
+ for(const v of [0,25,50,75,100])svg+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#28404a"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" fill="#a5b9c5" font-size="11">${v}</text>`;
+ let path='',prev=null;
+ for(let i=0;i<n;i++){
+  const p=points[i];
+  if(valid(p.score)){
+   const connect=prev&&prev.version===p.version&&prev.date<p.date;
+   path+=`${connect?'L':'M'}${x(i)},${y(p.score)} `;
+   prev=p;
+  }else prev=null;
+ }
+ svg+=`<path data-score-line d="${path}" fill="none" stroke="#5ee1c2" stroke-width="2.5"/>`;
+ points.forEach((p,i)=>{
+  const tip=day(p.date)+' · Score '+fmt(p.score)+'/100 · '+p.signal+' · Reglas '+p.version;
+  if(valid(p.score))svg+=`<circle cx="${x(i)}" cy="${y(p.score)}" r="4" fill="#5ee1c2"/>`;
+  const dx=n===1?W-L-R:(W-L-R)/(n-1),left=Math.max(L,x(i)-dx/2),right=Math.min(W-R,x(i)+dx/2);
+  svg+=`<rect x="${left}" y="${T}" width="${right-left}" height="${H-T-B}" fill="transparent" tabindex="0" data-score-tip="${esc(tip)}" aria-label="${esc(tip)}"><title>${esc(tip)}</title></rect>`;
+ });
+ for(const i of [...new Set([0,Math.floor((n-1)/2),n-1])])svg+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" fill="#a5b9c5" font-size="11">${points[i].date.slice(8,10)}/${points[i].date.slice(5,7)}</text>`;
+ const last=points[n-1],previous=points[n-2];
+ const comparable=previous&&previous.version===last.version&&previous.date<last.date&&valid(previous.score)&&valid(last.score);
+ const delta=comparable?last.score-previous.score:null;
+ const change=delta===null?'Sin variación comparable todavía':(delta>0?'↑ +':delta<0?'↓ ':'→ ')+fmt(delta)+' puntos vs. cierre observado anterior';
+ return svg+'</svg><p class="score-change">'+esc(change)+'</p><p class="score-tooltip" aria-live="polite">Último registro: '+esc(day(last.date))+' · '+esc(last.version)+'</p><p class="muted">Última observación registrada por cierre diario. '+n+' registros disponibles; no se reconstruye el pasado. Los cambios de reglas y datos faltantes cortan la línea. El puntaje no es una probabilidad ni una orden.</p>';
+}
+async function loadScoreHistory(asset){
+ const request=++scoreRequest,host=$('scoreHistory');
+ if(!host)return;
+ const current=()=>request===scoreRequest&&host===$('scoreHistory')&&$('detailModal').open;
+ const name=asset.score_history_file;
+ if(!name){host.innerHTML='<p>El historial comenzará con el próximo corte publicado.</p>';return;}
+ if(!/^(assets|sectors)-[A-Za-z0-9._-]+\.json$/.test(name)){host.textContent='Historial no disponible en este corte';return;}
+ try{
+  const response=await fetch('./scores/'+name+'?v='+encodeURIComponent(dataset.meta?.generated_at_utc||''));
+  if(!response.ok)throw new Error('HTTP '+response.status);
+  const data=await response.json();if(!current())return;
+  host.innerHTML=scoreHistorySVG(data);
+  const tip=host.querySelector('.score-tooltip');
+  for(const el of host.querySelectorAll('[data-score-tip]'))for(const event of ['mouseenter','focus','click'])el.addEventListener(event,()=>{tip.textContent=el.dataset.scoreTip;});
+ }catch(e){if(current())host.textContent='Historial no disponible en este corte';}
+}
+function scoreSpectrum(asset){
+ const score=visibleScore(asset),valid=typeof score==='number'&&Number.isFinite(score)&&score>=0&&score<=100;
+ return '<div class="score-spectrum"><div class="spectrum-labels"><span>Menor fortaleza</span><span>Mayor fortaleza</span></div><div class="spectrum-track" '+(valid?'role="meter" aria-label="Puntaje de decisión" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+score+'"':'')+'>'+(valid?'<span class="spectrum-marker" style="left:'+score+'%"></span>':'')+'</div><p>Lectura gradual del mismo puntaje. La señal combina fortaleza, condiciones de entrada y riesgo; mejorar el puntaje no habilita por sí solo una compra.</p></div>';
+}
+
+function openDetails(type,key){const x=type==='asset'?(dataset.assets||[]).find(v=>v.ticker===key):(dataset.sectors||[]).find(v=>v.sector===key);if(!x)return;selected={type,key};$('detailBody').innerHTML=detailContent(x,type);$('detailModal').showModal();loadChart(x,type);loadScoreHistory(x);const b=$('trackingButton');if(b)b.onclick=()=>{if(tracked.has(x.ticker))tracked.delete(x.ticker);else tracked.add(x.ticker);try{localStorage.setItem(storeKey,JSON.stringify([...tracked]))}catch(e){}renderHeader();renderTracked();b.textContent=tracked.has(x.ticker)?'✓ Dejar de seguir':'＋ Seguir / mi lista';};if($('goSheet'))$('goSheet').onclick=()=>{ $('detailModal').close();setTab('metodo')};}
 // Humor editorial visible; no depende del motor, precios ni datos privados.
 const martinQuotes=[
   'Martín compró ASTS para ir a la Luna. El -40% lo dejó en el subsuelo.',
@@ -341,7 +397,7 @@ async function load(){document.body.classList.add('is-loading');document.querySe
  dataset=j;}catch(e){loadError=e;}try{applyRules();fillFilters();renderHeader();renderTop5();renderAssets();renderRebounds();renderSectors();renderTracked();if(loadError){$('criticalBanner').textContent='Sin datos. Error de lectura: '+loadError.message;}}finally{document.body.classList.remove('is-loading');document.querySelector('main')?.setAttribute('aria-busy','false');}}
 for(const el of document.querySelectorAll('.tab'))el.onclick=()=>setTab(el.dataset.tab);
 for(const id of ['searchInput','sectorFilter','signalFilter','sortFilter'])$(id).addEventListener(id==='searchInput'?'input':'change',renderAssets);
-$('detailModal').addEventListener('close',()=>{chartRequest++;});
+$('detailModal').addEventListener('close',()=>{chartRequest++;scoreRequest++;});
 $('modalClose').onclick=()=>$('detailModal').close();$('detailModal').addEventListener('click',e=>{if(e.target===$('detailModal'))$('detailModal').close()});
 load();
 loadPaper();
