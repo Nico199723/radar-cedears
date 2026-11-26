@@ -38,7 +38,8 @@ class UIUpgradeTests(unittest.TestCase):
         self.assertTrue(ENABLE_CAUTION_ENTRIES)
         self.assertIn("risk_policy(macro,vixvalue)",self.updater)
         self.assertIn("COMPRA CON PRECAUCIÓN",self.html)
-        self.assertIn("reserva 70%",self.html)
+        # The value is now bound to backend rules; keep the current fallback.
+        self.assertIn('data-rule="policy_prudent.reserve_pct">70</span>%',self.html)
         self.assertIn("if ENABLE_CAUTION_ENTRIES and val:",self.updater)
         self.assertIn("cautious_signal",self.updater)
 

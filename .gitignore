@@ -3,3 +3,6 @@ __pycache__/
 backtest-out/
 .paper/
 .cache/
+
+node_modules/
+docs/charts/
