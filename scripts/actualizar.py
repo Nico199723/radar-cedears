@@ -56,6 +56,17 @@ ETF_SYMBOLS=set(SECTORS.values()) | {
 }
 
 
+def presentation_rules():
+    """Expose existing constants for UI text only; never feed trading decisions."""
+    from radar_features import MIN_OPTION_SCORE
+    from decision_engine import BUY_FLOOR, PRIORITY_FLOOR
+    return {
+        'thresholds': {'watch': MIN_OPTION_SCORE, 'buy': BUY_FLOOR, 'priority': PRIORITY_FLOOR},
+        'policy_normal': risk_policy('FAVORABLE', 0.0),
+        'policy_prudent': risk_policy('DEFENSIVO', 0.0),
+    }
+
+
 def number(v, nd=3):
     try:
         x = float(v)
@@ -498,6 +509,10 @@ def main():
     state_tmp.replace(state_path)
     public_path=ROOT/"docs"/"paper.json"
     public_path.write_text(json.dumps(paper_public,ensure_ascii=False,allow_nan=False),encoding="utf-8")
+    # Presentation metadata only: no change to decisions, fills or ranking membership.
+    from chart_data import publish_charts
+    result['meta']['rules'] = presentation_rules()
+    result['meta']['charts'] = publish_charts(frames, now, ROOT/'docs'/'charts')
     OUT.parent.mkdir(parents=True,exist_ok=True)
     tmp=OUT.with_suffix('.json.tmp')
     tmp.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False),encoding='utf-8')
