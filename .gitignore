@@ -6,3 +6,6 @@ backtest-out/
 
 node_modules/
 docs/charts/
+
+.scores/
+docs/scores/

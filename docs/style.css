@@ -133,3 +133,13 @@
  .signals-table .c-opt{display:none}
 }
 @media(prefers-reduced-motion:reduce){.is-loading .summary .stat strong{animation:none}}
+
+/* One continuous score, with observed history and an explicit execution decision. */
+.score-spectrum,.score-history-panel{margin:18px 0;padding:18px;border:1px solid #28404a;border-radius:14px;background:#101f28}
+.spectrum-labels{display:flex;justify-content:space-between;color:#a5b9c5;font-size:12px;margin-bottom:12px}
+.spectrum-track{height:10px;position:relative;margin:0 7px;background:linear-gradient(90deg,#f27b80,#f6c16b 50%,#5ee1c2);border-radius:8px}
+.spectrum-marker{position:absolute;top:-4px;width:4px;height:18px;background:white;border:1px solid #101f28;transform:translateX(-50%);border-radius:3px}
+.score-spectrum p,.score-history-panel p{font-size:12px;line-height:1.6;color:#a5b9c5}
+.score-history-panel svg{display:block;width:100%;height:auto;min-width:0}
+.score-history-panel h3{margin:0 0 12px}.score-change{font-weight:700;color:#e5eeee!important}
+[data-score-tip]:focus{outline:2px solid #f6c16b;outline-offset:-2px}

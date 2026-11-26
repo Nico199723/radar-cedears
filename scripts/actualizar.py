@@ -513,6 +513,8 @@ def main():
     from chart_data import publish_charts
     result['meta']['rules'] = presentation_rules()
     result['meta']['charts'] = publish_charts(frames, now, ROOT/'docs'/'charts')
+    from score_history import restore, update, publish
+    publish(update(restore(), result), result, ROOT)
     OUT.parent.mkdir(parents=True,exist_ok=True)
     tmp=OUT.with_suffix('.json.tmp')
     tmp.write_text(json.dumps(result,ensure_ascii=False,separators=(',',':'),allow_nan=False),encoding='utf-8')
