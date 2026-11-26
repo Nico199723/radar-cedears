@@ -70,6 +70,13 @@ jobs:
           path: .paper/ledger.json
           retention-days: 90
           if-no-files-found: error
+      - name: Guardar historial de puntajes observados (sin commits)
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-score-history-v1
+          path: .scores/score-history.json
+          retention-days: 90
+          if-no-files-found: error
       - name: Preparar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Subir sitio como artefacto
