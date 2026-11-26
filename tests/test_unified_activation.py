@@ -48,7 +48,7 @@ class UnifiedProductionTests(unittest.TestCase):
         a=asset("LOW",69.99)
         self.assertFalse(evaluate_entry(a,"FAVORABLE",18)[0])
         b=asset("VETO",95)
-        b["data"]["macd_hist_d"]=-.5
+        b["data"]["macd_hist_d"]=None
         self.assertFalse(evaluate_entry(b,"FAVORABLE",18)[0])
         self.assertEqual(decide(b["data"],"FAVORABLE",18,True).signal,
                          "SCORE ALTO · VETADO")
@@ -66,7 +66,7 @@ class UnifiedProductionTests(unittest.TestCase):
         assets=[asset("A",73),asset("B",92),asset("C",80),
                 asset("D",69),asset("E",88),asset("F",96)]
         vetoed=asset("F",96)
-        vetoed["data"]["macd_hist_d"]=-.2
+        vetoed["data"]["macd_hist_d"]=None
         decision=decide(vetoed["data"],"FAVORABLE",18,True).public()
         vetoed.update(signal=decision["signal"],vetoes=decision["vetoes"])
         assets[-1]=vetoed
@@ -80,7 +80,7 @@ class UnifiedProductionTests(unittest.TestCase):
         self.assertIn("production_violations=audit_consistency(",script)
         self.assertIn("if production_violations:",script)
         self.assertIn("'decision_mode':'UNIFIED ACTIVE",script)
-        self.assertIn("'rules_version':'2.0-unified-decision-active'",script)
+        self.assertIn("'rules_version':DECISION_RULES_VERSION",script)
 
 if __name__=="__main__":
     unittest.main()

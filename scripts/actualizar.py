@@ -462,7 +462,7 @@ def main():
         'meta':{'generated_at_utc':now.isoformat(timespec='seconds'), 'generated_at_ar':now.astimezone(AR_TZ).isoformat(timespec='seconds'),
           'source':SOURCE,'universe_size':len(catalog),'mapped_us':sum(bool(x['subyacente_usa']) for x in catalog),
           'download_coverage':round(coverage*100,1), 'period':'3y / 1d',
-          'rules_version':'2.0-unified-decision-active',
+          'rules_version':DECISION_RULES_VERSION,
           'staged_rules_version':DECISION_RULES_VERSION,
           'consistency_violations':consistency_violations,
           'production_consistency_violations':production_violations,
@@ -480,7 +480,7 @@ def main():
                                  for label in sorted({a['signal'] for a in assets})},
           'sector_signal_counts':{label:sum(a['signal']==label for a in sectors)
                                   for label in sorted({a['signal'] for a in sectors})},
-          'note':'Score de decisión único = rank_score visible 0–100. Comprar desde 70 con filtros sin vetos; >=75 permite precaución sin gatillo del mismo día si estructura sana. Scores técnico y heredado son diagnósticos y NO habilitan órdenes. Macro bajo SMA50 reduce tamaño, no veto general. Auditoría de señales y sectores = 0 obligatoria. Estrategia versionada, A/B 5 años publicado; no es asesoramiento ni datos BYMA validados.'},
+          'note':'Score de decisión único = rank_score visible 0–100. Comprar desde 70 con datos verificables y controles de riesgo. Las confirmaciones técnicas ya ponderadas en el score no vetan por sí solas; si son débiles, sólo precaución. >=75 conserva continuación sin gatillo del mismo día salvo deterioro o veto de riesgo. Scores técnico y heredado son diagnósticos y NO habilitan órdenes. Macro bajo SMA50 reduce tamaño, no veto general. Auditoría de señales y sectores = 0 obligatoria. Estrategia versionada, A/B 5 años publicado; no es asesoramiento ni datos BYMA validados.'},
         'macro':{'state':macro,'spy':spy,'qqq':qqq,'vix':vixvalue,
                  'reason':'SPY/QQQ bajo SMA50 exige posición chica y 70% de reserva, no veto general. Sólo macro sin verificar o VIX >=30 deshabilitan nuevas compras. Evaluar contexto y señales individuales.'},
         'assets':assets,'sectors':sectors,'top5':selection,

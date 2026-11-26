@@ -1,4 +1,4 @@
-"""Motor de señal único CANDIDATO. No se activa en main sin backtest A/B.
+"""Motor único: fortaleza gradual y controles de integridad separados.
 
 Score visible=rank_score: los score técnico y heredado son diagnósticos.
 El riesgo del mercado decide size; nunca descalifica sólo por SPY/QQQ<SMA50.
@@ -8,7 +8,7 @@ import math
 from dataclasses import dataclass
 from collections import Counter
 
-RULES_VERSION="2.0-unified-decision-active"
+RULES_VERSION="2.1-gradual-confirmations"
 BUY_FLOOR=70.0
 PRIORITY_FLOOR=75.0
 REDUCE_FLOOR=35.0
@@ -58,24 +58,24 @@ def hard_vetoes(row:dict, macro:str, vix:float|None,
     veto=[]
     if not fresh:veto.append("CIERRE SIN VIGENCIA")
     p,ma200,ma21=(numeric(row,k) for k in ("price","ma200","ma21"))
-    if p is None or ma200 is None or p<=ma200:
-        veto.append("PRECIO BAJO SMA200")
-    if p is None or ma21 is None or p<=ma21:
-        veto.append("PRECIO BAJO SMA21")
+    if p is None or p<=0 or ma200 is None or ma200<=0:
+        veto.append("PRECIO / SMA200 SIN VERIFICAR")
+    if ma21 is None or ma21<=0:
+        veto.append("SMA21 SIN VERIFICAR")
     macd=numeric(row,"macd_hist_d")
-    if macd is None or macd<=0:veto.append("MACD DIARIO NO POSITIVO")
+    if macd is None:veto.append("MACD DIARIO SIN VERIFICAR")
     if (numeric(row,"dollar_volume20") or 0)<MIN_DOLLAR_VOLUME:
         veto.append("LIQUIDEZ USD INSUFICIENTE")
     rsi=numeric(row,"rsi14d")
-    if rsi is None or rsi<=35 or rsi>=75:
-        veto.append("RSI DIARIO EXTREMO")
+    if rsi is None or not 0<=rsi<=100:
+        veto.append("RSI DIARIO SIN VERIFICAR")
     if not row.get("rs_verified"):
         veto.append("RS SPY/QQQ SIN VERIFICAR")
     week=numeric(row,"macd_hist_w")
-    if week is None or week<0:
-        veto.append("MACD SEMANAL NO CONFIRMADO")
-    if row.get("obv_up10") is not True:
-        veto.append("OBV SIN CONFIRMAR")
+    if week is None:
+        veto.append("MACD SEMANAL SIN VERIFICAR")
+    if not isinstance(row.get("obv_up10"),bool):
+        veto.append("OBV SIN VERIFICAR")
     if macro not in ("FAVORABLE","MIXTO","DEFENSIVO"):
         veto.append("MACRO SIN VERIFICAR")
     if vix is None or not math.isfinite(float(vix)) or float(vix)>=VIX_STRESS_LIMIT:
@@ -86,6 +86,26 @@ def hard_vetoes(row:dict, macro:str, vix:float|None,
     # No añadir un veto por SPY/QQQ bajo SMA50: se reduce el tamaño.
     return tuple(veto)
 
+
+
+def soft_conditions(row:dict)->tuple[str,...]:
+    """These inputs already affect rank_score continuously; do not deduct twice."""
+    notes=[]
+    p=numeric(row,"price")
+    for key,label in (("ma21","SMA21"),("ma200","SMA200")):
+        mean=numeric(row,key)
+        if p is not None and mean is not None and p<=mean:
+            notes.append("Precio bajo "+label+": ponderado en el score")
+    for key,label in (("macd_hist_d","diario"),("macd_hist_w","semanal")):
+        value=numeric(row,key)
+        if value is not None and value<=0:
+            notes.append("MACD "+label+" sin confirmar: ponderado en el score")
+    rsi=numeric(row,"rsi14d")
+    if rsi is not None and (rsi<=35 or rsi>=75):
+        notes.append("RSI extremo: penalización gradual incluida en el score")
+    if row.get("obv_up10") is False:
+        notes.append("OBV sin confirmar: ponderado en volumen del score")
+    return tuple(notes)
 
 def decide(row:dict|None, macro:str, vix:float|None,
            fresh:bool, earnings:dict|None=None)->Decision:
@@ -119,6 +139,7 @@ def decide(row:dict|None, macro:str, vix:float|None,
     if score<BUY_FLOOR:
         return Decision("HOLD / ESPERAR","hold",score,(),"",macro,
                         (f"Score {score:.1f} < mínimo {BUY_FLOOR:g}",))
+    warnings=soft_conditions(row)
     # Gatillos son puertas de ejecución, separadas del puntaje.
     trigger=("CRUCE SMA21" if row.get("cross_up21") else
              "RETROCESO SMA20" if row.get("near20") else
@@ -128,13 +149,13 @@ def decide(row:dict|None, macro:str, vix:float|None,
                         ("Score suficiente; esperar gatillo concreto",))
     if not trigger and score>=PRIORITY_FLOOR:
         trigger="PRIORIDAD >=75 / CONTINUACIÓN CONTROLADA"
-    if macro=="FAVORABLE" and score<PRIORITY_FLOOR and trigger:
+    if macro=="FAVORABLE" and score<PRIORITY_FLOOR and trigger and not warnings:
         return Decision("COMPRA CONDICIONAL","up",score,(),trigger,macro,
                         ("Entrada condicionada con macro favorable; no orden real",))
     # Si el setup es sólo por score elevado o la macro es defensiva,
     # se permite exclusivamente en tamaño reducido.
     return Decision("COMPRA CON PRECAUCIÓN","caution",score,(),trigger,macro,
-                    ("Capital reducido; stop condicionado y ejecución t+1",))
+                    ("Confirmación parcial o contexto prudente; revisar tamaño y ejecutar sólo t+1",)+warnings)
 
 
 def audit_consistency(assets:list[dict], *, require_score:bool=True)->list[dict]:
