@@ -31,8 +31,8 @@ class DecisionConsistencyTests(unittest.TestCase):
         self.assertEqual(original.signal,new.signal)
         self.assertEqual(original.score_decision,new.score_decision)
     def test_high_score_with_veto_not_opportunity(self):
-        for k,v in [("price",99),("macd_hist_d",-.3),("dollar_volume20",1000),
-                    ("rsi14d",80),("rs_verified",False),("obv_up10",False)]:
+        for k,v in [("price",None),("macd_hist_d",None),("dollar_volume20",1000),
+                    ("rsi14d",None),("rs_verified",False),("obv_up10",None)]:
             r=row(95);r[k]=v
             d=decide(r,"FAVORABLE",18,True)
             self.assertNotIn(d.signal,OPPORTUNITY_SIGNALS,k)
