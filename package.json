@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "scripts": {"test": "node tests/presentation_dom.cjs && node tests/track_presentation.cjs"},
+  "devDependencies": {"jsdom": "31.0.1"}
+}

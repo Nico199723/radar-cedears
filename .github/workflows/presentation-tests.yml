@@ -1,0 +1,25 @@
+name: Presentation tests
+on:
+  pull_request:
+  push:
+    paths:
+      - 'docs/**'
+      - 'scripts/chart_data.py'
+      - 'scripts/actualizar.py'
+      - 'tests/**'
+      - 'package*.json'
+      - '.github/workflows/presentation-tests.yml'
+permissions:
+  contents: read
+jobs:
+  presentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --check docs/app.js
+      - run: npm test
