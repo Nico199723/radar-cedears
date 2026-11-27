@@ -266,9 +266,9 @@ if($('martinNext')){
 
 const signedUsd=v=>(v==null?'—':(Number(v)>=0?'+':'−')+usd(Math.abs(Number(v))));
 const signedPct=v=>(v==null?'—':(Number(v)>0?'+':'')+fmt(v)+'%');
-function linePaper(points, fills=[], initial=2000){
+function linePaper(points, fills=[], initial=2000, intraday=false){
  const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
- const dateKey=v=>/^\d{4}-\d{2}-\d{2}/.test(String(v))?String(v).slice(0,10):'';
+ const dateKey=v=>/^\d{4}-\d{2}-\d{2}/.test(String(v))?(intraday?String(v):String(v).slice(0,10)):'';
  const byDay=new Map();
  for(const p of points||[]){const date=dateKey(p?.date);if(date&&finite(p.equity))byDay.set(date,{...p,date,equity:Number(p.equity)});}
  const a=[...byDay.values()].sort((x,y)=>x.date.localeCompare(y.date));
@@ -276,10 +276,10 @@ function linePaper(points, fills=[], initial=2000){
  initial=finite(initial)&&Number(initial)>0?Number(initial):2000;
  const money=(v,dec=2)=>'US$ '+Number(v).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:dec});
  const signed=v=>(v<0?'−':v>0?'+':'')+money(Math.abs(v));
- const shortDate=s=>{const [y,m,d]=s.split('-');return d+'/'+m+(a[0].date.slice(0,4)!==a.at(-1).date.slice(0,4)?'/'+y.slice(2):'');};
+ const shortDate=s=>{if(intraday)return new Date(s).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hourCycle:'h23',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});const [y,m,d]=s.split('-');return d+'/'+m+(a[0].date.slice(0,4)!==a.at(-1).date.slice(0,4)?'/'+y.slice(2):'');};
  const eventName=v=>String(v||'').replace(/COMPRA\s+\d+\s*\/\s*\d+/gi,'COMPRA');
  const events=new Map();
- for(const f of fills||[]){const k=dateKey(f.date);if(!events.has(k))events.set(k,[]);events.get(k).push(f);}
+ for(const f of fills||[]){const stamp=f.timestamp||f.date;const k=intraday?(a.find(p=>Date.parse(p.date)>=Date.parse(stamp))?.date||''):dateKey(f.date);if(!events.has(k))events.set(k,[]);events.get(k).push(f);}
  const values=[initial,...a.map(p=>p.equity)],min=Math.min(...values),max=Math.max(...values);
  const margin=Math.max(initial*.01,(max-min)*.12,1);
  const nice=v=>{const n=10**Math.floor(Math.log10(v));return [1,2,2.5,5,10].find(k=>k*n>=v-1e-10)*n;};
@@ -298,7 +298,7 @@ function linePaper(points, fills=[], initial=2000){
  for(let i=0;i<5;i++){const v=lo+i*step,y=num(yy(v));svg+=`<line x1="${L}" y1="${y}" x2="${R}" y2="${y}" stroke="#2a3b50"/><text x="${L-12}" y="${num(yy(v)+4)}" text-anchor="end" fill="#9eb4c9" font-size="12">${esc(money(v,dec))}</text>`;}
  const ticks=new Set(Array.from({length:Math.min(7,a.length)},(_,i)=>Math.round(i*(a.length-1)/(Math.min(7,a.length)-1))));
  for(const i of ticks){svg+=`<line x1="${num(xx(i))}" y1="${B}" x2="${num(xx(i))}" y2="${B+6}" stroke="#76899d"/><text x="${num(xx(i))}" y="${B+25}" text-anchor="middle" fill="#9eb4c9" font-size="12">${esc(shortDate(a[i].date))}</text>`;}
- svg+=`<text x="${(L+R)/2}" y="310" text-anchor="middle" fill="#b7cbdc" font-size="13">Rueda (fecha)</text><line x1="${L}" y1="${num(yy(initial))}" x2="${R}" y2="${num(yy(initial))}" stroke="#b9c8d6" stroke-dasharray="6 5"/><text x="${L+8}" y="${num(yy(initial)-12)}" fill="#d4e0eb" font-size="12">${esc('Capital inicial '+money(initial))}</text>`;
+ svg+=`<text x="${(L+R)/2}" y="310" text-anchor="middle" fill="#b7cbdc" font-size="13">${intraday?'Fecha y hora ARG':'Rueda (fecha)'}</text><line x1="${L}" y1="${num(yy(initial))}" x2="${R}" y2="${num(yy(initial))}" stroke="#b9c8d6" stroke-dasharray="6 5"/><text x="${L+8}" y="${num(yy(initial)-12)}" fill="#d4e0eb" font-size="12">${esc('Capital inicial '+money(initial))}</text>`;
  const segment=(x1,y1,x2,y2,color)=>`<path d="M${num(x1)} ${num(yy(y1))} L${num(x2)} ${num(yy(y2))}" stroke="${color}" stroke-width="2.8" fill="none"/>`;
  for(let i=1;i<a.length;i++){
    const v=a[i-1].equity,w=a[i].equity,x=xx(i-1),z=xx(i);
@@ -333,15 +333,15 @@ function renderPaper(){
  const clean=v=>String(v||'').replace(/COMPRA\s+\d+\s*\/\s*\d+/gi,'COMPRA').replace(/AGREGAR TRAMO/gi,'AGREGAR ACCIONES').replace(/\bTRAMOS?\b/gi,'partes');
  const sub=t=>`<span class="ticker-sub">${esc(t)}</span>`;
  const td=(v,cls='')=>`<td class="paper-num ${cls}">${esc(v)}</td>`;
- const date=v=>esc(day(v));
+ const date=v=>esc(String(v||'').includes('T')?new Date(v).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hourCycle:'h23',dateStyle:'short',timeStyle:'short'}):day(v));
  const period=(a,b)=>{const short=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v))?String(v).slice(8,10)+'/'+String(v).slice(5,7)+(String(a).slice(0,4)!==String(b).slice(0,4)?'/'+String(v).slice(2,4):''):'—';return esc(short(a)+' → '+short(b));};
  const initial=num(p.initial_capital_usd)??2000,equity=num(p.equity_usd),cash=num(p.cash_usd);
  const invested=sum(pos,x=>x.market_value_usd),cost=sum(pos,x=>valid(x.shares)&&valid(x.avg_cost_usd)?x.shares*x.avg_cost_usd:null),floating=sum(pos,x=>x.unrealized_usd);
  const result=equity===null?null:equity-initial, n=Number(p.closed_count)||0, partial=Number(p.partial_exit_count)||0;
  const outdated=Date.now()-Date.parse((p.last_closed_session||'')+'T23:59:59Z')>6*86400000;
  root.className='paper-status'+(outdated?' paper-warn':'');
- root.textContent=(outdated?'Registro con último cierre antiguo. ':'')+'Cartera 100% ficticia · se ejecuta al OPEN siguiente · no son órdenes reales';
- $('paperCut').textContent='Última rueda registrada: '+day(p.last_closed_session);
+ root.textContent=(outdated?'Registro con último cierre antiguo. ':'')+(p.execution_mode?'Cartera 100% ficticia · señal diaria, ejecución en vela posterior de 15m · '+p.intraday_status+(p.unpriced_symbols?.length?' · Valuaciones pendientes: '+p.unpriced_symbols.join(', '):''):'Cartera 100% ficticia · se ejecuta al OPEN siguiente · no son órdenes reales');
+ $('paperCut').textContent=p.execution_mode?'Última valuación: '+(p.valued_at?new Date(p.valued_at).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hourCycle:'h23'}):'pendiente de la próxima vela completa')+' · Hora ARG':'Última rueda registrada: '+day(p.last_closed_session);
  $('paperEquity').textContent=money(equity);$('paperEquitySub').textContent='Capital inicial '+money(initial);
  $('paperCash').textContent=money(cash);$('paperCashSub').textContent=(equity>0?fmt(ratio(cash,equity))+'%':'—')+' del patrimonio';
  $('paperInvested').textContent=money(invested);$('paperInvestedSub').textContent=pos.length+' posiciones · '+(equity>0?fmt(ratio(invested,equity))+'%':'—')+' del patrimonio';
@@ -351,6 +351,7 @@ function renderPaper(){
  $('paperTradesSub').textContent=n>=10&&valid(p.win_rate_pct)?'Acierto '+fmt(p.win_rate_pct)+'%':'sin dato útil todavía (hay '+n+' de 10)';
  $('paperDD').textContent=pct(p.max_drawdown_pct);
  $('paperGraph').innerHTML=linePaper(p.equity_history||[],p.fills||[],initial);
+ if($('paperIntradayGraph'))$('paperIntradayGraph').innerHTML=p.execution_mode?'<h3>Seguimiento intradiario de la misma cartera</h3>'+linePaper(p.intraday_equity||[],p.fills||[],initial,true):'';
  const waiting=p.pending_orders||[];
  $('paperPending').innerHTML=waiting.length?waiting.map(x=>{
    let action;
@@ -361,14 +362,14 @@ function renderPaper(){
      const position=pos.find(a=>a.usa===x.usa),fraction=Number(x.fraction??1);
      action=(fraction<1?'VENTA PARCIAL '+qty(fraction*100)+'%':'VENTA TOTAL')+' · '+(position&&valid(position.shares)&&fraction>0&&fraction<=1?'≈ '+qty(position.shares*fraction)+' acc.':'cantidad no informada');
    }
-   return `<tr><td>${date(x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(action)}</td><td>${esc(clean(x.reason))}</td></tr>`;
+   return `<tr><td>${date(x.issued_at||x.issued_day)}</td><td>${esc(x.ticker||x.usa)}</td><td>${esc(action)}</td><td>${esc(clean(x.reason))}</td></tr>`;
  }).join(''):'<tr><td colspan="4">Sin órdenes pendientes para la próxima apertura.</td></tr>';
  $('paperPositions').innerHTML=pos.length?pos.map(x=>{
    const c=valid(x.shares)&&valid(x.avg_cost_usd)?x.shares*x.avg_cost_usd:null, r=ratio(x.unrealized_usd,c),distance=valid(x.stop_usd)&&x.last_price_usd>0?100*(x.stop_usd/x.last_price_usd-1):null;
    return `<tr><td>${esc(x.ticker||x.usa)}${sub(x.usa)}</td>${td(qty(x.shares))}${td(money(x.avg_cost_usd))}${td(money(x.last_price_usd))}${td(money(x.market_value_usd))}${td(valid(ratio(x.market_value_usd,equity))?fmt(ratio(x.market_value_usd,equity))+'%':'—')}<td class="paper-num ${color(x.unrealized_usd)}">${esc(signed(x.unrealized_usd))}${sub(pct(r))}</td><td class="paper-num">${esc(money(x.stop_usd))}${sub(pct(distance)+' al último · '+(x.risk_mode||'No informado'))}</td><td>${date(x.entry_date)}${sub((x.sessions_held??'—')+' ruedas')}</td></tr>`;
  }).join('')+`<tr class="paper-totals"><th scope="row">Totales</th><td></td><td class="paper-num" colspan="2">${esc('Costo '+money(cost))}</td>${td(money(invested))}${td(equity>0?fmt(ratio(invested,equity))+'%':'—')}${td(signed(floating),color(floating))}<td colspan="2"></td></tr>`:'<tr><td colspan="9">Sin posiciones abiertas. El efectivo queda en reserva mientras no aparezcan condiciones.</td></tr>';
  $('paperClosed').innerHTML=closed.length?closed.map(x=>`<tr><td>${esc(x.ticker||x.usa||'—')}</td><td>${period(x.entry_date,x.exit_date)}${sub((x.holding_sessions??'—')+' ruedas')}</td>${td(qty(x.shares))}${td(money(x.cost_usd))}<td class="paper-num">${esc(money(x.exit_usd))}${sub('por acción')}</td><td class="paper-num ${color(x.pnl_usd)}">${esc(signed(x.pnl_usd))}${sub(pct(x.return_pct))}</td><td><strong>${esc(x.partial?'PARCIAL '+qty(x.exit_fraction_pct)+'%':'FINAL')}</strong>${sub(clean(x.reason))}</td></tr>`).join(''):'<tr><td colspan="7">Todavía no hubo salidas parciales ni finales simuladas.</td></tr>';
- $('paperFills').innerHTML=fills.length?fills.map(x=>`<tr><td>${date(x.date)}</td><td>${esc(x.usa)}</td><td><span class="pill ${String(x.action).includes('STOP')?'down':String(x.action).startsWith('COMPRA')?'up':'hold'}">${esc(clean(x.action))}</span></td>${td(qty(x.shares))}${td(money(x.price_usd))}${td(money(x.amount_usd))}<td>${esc(clean(x.reason))}</td></tr>`).join(''):'<tr><td colspan="7">Sin operaciones: todavía no hay compras ni ventas ejecutadas en la simulación.</td></tr>';
+ $('paperFills').innerHTML=fills.length?fills.map(x=>`<tr><td>${date(x.timestamp||x.date)}</td><td>${esc(x.usa)}</td><td><span class="pill ${String(x.action).includes('STOP')?'down':String(x.action).startsWith('COMPRA')?'up':'hold'}">${esc(clean(x.action))}</span></td>${td(qty(x.shares))}${td(money(x.price_usd))}${td(money(x.amount_usd))}<td>${esc(clean(x.reason))}</td></tr>`).join(''):'<tr><td colspan="7">Sin operaciones: todavía no hay compras ni ventas ejecutadas en la simulación.</td></tr>';
 }
 async function loadPaper(){
  try{
@@ -401,3 +402,6 @@ $('detailModal').addEventListener('close',()=>{chartRequest++;scoreRequest++;});
 $('modalClose').onclick=()=>$('detailModal').close();$('detailModal').addEventListener('click',e=>{if(e.target===$('detailModal'))$('detailModal').close()});
 load();
 loadPaper();
+
+// Poll the published ledger; this does not execute or accelerate backend orders.
+setInterval(()=>{if(!document.hidden&&view==='simulador')loadPaper();},120000);
