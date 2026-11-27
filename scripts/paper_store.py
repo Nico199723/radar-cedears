@@ -113,7 +113,7 @@ def load_or_initialize(latest_day:str,now_iso:str)->dict:
     if state is None:
         logging.warning("Nuevo track record forward desde %s (sin operaciones previas)",latest_day)
         return new_ledger(latest_day,now_iso)
-    if state["last_session"]>latest_day:
+    if state.get("last_daily_session",state["last_session"])>latest_day:
         logging.warning("OHLC SPY de %s anterior al ledger %s; "
                         "mantener ledger sin fills ni marcas retroactivas",
                         latest_day,state["last_session"])
