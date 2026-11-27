@@ -93,8 +93,9 @@
         <div class="paper-stat"><span>Máximo drawdown</span><strong id="paperDD">—</strong><small>Mayor caída desde un máximo registrado</small></div>
       </div>
       <div class="paper-graph" id="paperGraph"></div>
-      <h3 class="paper-subtitle">Órdenes para la próxima apertura</h3>
-      <div class="tablebox"><table><thead><tr><th>Señal al cierre</th><th>Activo</th><th>Acción prevista</th><th>Motivo</th></tr></thead><tbody id="paperPending"><tr><td colspan="4">Sin órdenes pendientes.</td></tr></tbody></table></div>
+      <div class="paper-graph" id="paperIntradayGraph"></div>
+      <h3 class="paper-subtitle">Órdenes para la próxima vela posterior a la señal</h3>
+      <div class="tablebox"><table><thead><tr><th>Señal observada</th><th>Activo</th><th>Acción prevista</th><th>Motivo</th></tr></thead><tbody id="paperPending"><tr><td colspan="4">Sin órdenes pendientes.</td></tr></tbody></table></div>
       <h3 class="paper-subtitle">Posiciones abiertas</h3>
       <div class="tablebox"><table><thead><tr><th>Activo</th><th class="paper-num">Cantidad</th><th class="paper-num">Costo prom.</th><th class="paper-num">Último</th><th class="paper-num">Valor</th><th class="paper-num">% cartera</th><th class="paper-num">Resultado</th><th class="paper-num">Stop</th><th>Desde</th></tr></thead><tbody id="paperPositions"><tr><td colspan="9">Sin operaciones registradas.</td></tr></tbody></table></div>
       <h3 class="paper-subtitle">Operaciones cerradas</h3>
@@ -103,13 +104,14 @@
       <div class="tablebox"><table><thead><tr><th>Fecha</th><th>Activo</th><th>Evento</th><th class="paper-num">Cantidad</th><th class="paper-num">Precio</th><th class="paper-num">Monto</th><th>Motivo</th></tr></thead><tbody id="paperFills"><tr><td colspan="7">Sin operaciones registradas.</td></tr></tbody></table></div>
       <details class="paper-rules">
         <summary>Reglas y supuestos de la simulación</summary>
+        <p>Un solo motor de señales diarias y una sola cartera. Se procesan velas completas de 15 minutos; corridas programadas cada 30 minutos, sujetas a demoras de GitHub y Yahoo. La frecuencia no garantiza operaciones: se mantienen reservas, concentración y una compra por activo por rueda. Los stops detectados dentro de una vela informan su ventana, no una hora exacta de ejecución. No hay órdenes a brokers.</p>
         <ul>
           <li>Simulación forward: no reconstruye operaciones históricas. Capital inicial US$ 2.000 ficticios.</li>
           <li>Compras de a partes: 40% / 35% / 25%. Los importes pendientes son máximos orientativos, sujetos a efectivo y límites al ejecutar.</li>
           <li>Ventas parciales del 50% en 2R o por debilidad; el remanente sigue con stop móvil. Stop o ruptura estructural liquidan todo el remanente.</li>
           <li>Mercado favorable: hasta US$ <span data-rule="policy_normal.max_position_usd">250</span> por posición, reserva del <span data-rule="policy_normal.reserve_pct">50</span>% y stop del <span data-rule="policy_normal.stop_pct">8</span>%.</li>
           <li>Mercado mixto o defensivo: hasta US$ <span data-rule="policy_prudent.max_position_usd">120</span> por posición, reserva del <span data-rule="policy_prudent.reserve_pct">70</span>%, stop del <span data-rule="policy_prudent.stop_pct">6</span>% y máximo <span data-rule="policy_prudent.max_positions">2</span> posiciones. Los ETFs apalancados tienen límites más estrictos.</li>
-          <li>Ejecución al OPEN siguiente: comisión del 0,05% y slippage del 0,10% por lado. Los gaps pueden provocar pérdidas superiores al stop.</li>
+          <li>Ejecución al OPEN de una vela de 15 minutos posterior a la observación: comisión del 0,05% y slippage del 0,10% por lado. Los gaps pueden provocar pérdidas superiores al stop.</li>
           <li>Acierto calculado sobre operaciones completamente cerradas; se muestra desde 10 cierres. Las ventas parciales se cuentan aparte.</li>
         </ul>
         <p class="method-disclaimer">Saldo enteramente ficticio y registro de señales forward, sin conexión con tus brokers. La simulación usa precios ajustados de Yahoo; puede haber revisiones por splits y dividendos. No incluye ratio/CCL, impuestos ni spread de BYMA. El historial se conserva con snapshots de GitHub Actions sujetos a retención; si deja de poder recuperarse, el sistema no reinicia el capital silenciosamente.</p>

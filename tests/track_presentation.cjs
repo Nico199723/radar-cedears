@@ -53,3 +53,13 @@ if(process.argv[2]){
  fs.writeFileSync(process.argv[2]+'/before.html',old);fs.writeFileSync(process.argv[2]+'/after.html',graph);fs.writeFileSync(process.argv[2]+'/fixture.json',JSON.stringify(fixture,null,2));
 }
 console.log('Track presentation: rendering, quantities, bounds, dates, escaping, empty states and 10-close gate OK');
+
+const intraday={...fixture,execution_mode:'paper-15m-v1',observed_at:'2026-11-27T16:37:00Z',valued_at:'2026-11-27T16:30:00Z',intraday_status:'Velas recientes disponibles',unpriced_symbols:[],intraday_equity:[{date:'2026-11-27T16:00:00Z',equity:2000,cash:1900},{date:'2026-11-27T16:30:00Z',equity:2001,cash:1900}],fills:[{...fixture.fills[0],timestamp:'2026-11-27T16:15:00Z',date:'2026-11-27'}]};
+const live=context(source,intraday);vm.runInContext('renderPaper()',live.ctx);
+assert(live.nodes.paperStatus.textContent.includes('señal diaria'));
+assert(live.nodes.paperCut.textContent.includes('Hora ARG'));
+assert(live.nodes.paperIntradayGraph.innerHTML.includes('Fecha y hora ARG'));
+assert(live.nodes.paperIntradayGraph.innerHTML.includes('13:00'));
+assert(live.nodes.paperFills.innerHTML.includes('13:15'));
+assert(!/NaN|undefined|Infinity/.test(live.nodes.paperIntradayGraph.innerHTML));
+console.log('Intraday ledger UI: times, separate intraday curve and daily eligibility OK');
