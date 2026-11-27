@@ -223,6 +223,9 @@ def process(state,frames,assets,macro,vix,latest_day,now,daily_frames=None):
         if s['intraday_equity'] and s['intraday_equity'][-1]['date']==stamp:s['intraday_equity'][-1]=point
         elif not s['intraday_equity'] or stamp>s['intraday_equity'][-1]['date']:s['intraday_equity'].append(point)
         s['intraday_equity']=s['intraday_equity'][-500:]
+        daily_point={'date':today,'equity':point['equity'],'cash':point['cash'],'valued_at':stamp}
+        if s['equity_history'] and s['equity_history'][-1]['date']==today:s['equity_history'][-1]=daily_point
+        elif not s['equity_history'] or s['equity_history'][-1]['date']<today:s['equity_history'].append(daily_point)
     check_ledger(s)
     return s
 

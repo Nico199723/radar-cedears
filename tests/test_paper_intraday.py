@@ -37,7 +37,7 @@ class IntradayTests(unittest.TestCase):
         x=run(s,'2026-11-27 10:07')
         self.assertEqual(s,original)
         self.assertEqual(x['cash'],1995);self.assertEqual(x['fills'],s['fills'])
-        self.assertEqual(x['equity_history'],s['equity_history'])
+        self.assertEqual(x['equity_history'][:len(s['equity_history'])],s['equity_history'])
         self.assertEqual(x['execution_mode'],VERSION)
         self.assertEqual(x['orders'][0]['issued_at'],'2026-11-27T15:07:00+00:00')
 
@@ -121,3 +121,12 @@ class IntradayTests(unittest.TestCase):
         x=run(self.state(),'2026-11-27 10:07')
         y=process(x,{},assets(),'FAVORABLE',18,'2026-11-25',pd.Timestamp('2026-11-28 16:00Z'))
         self.assertFalse(y['orders']);self.assertIn('vencida',y['cancelled'][-1]['reason'])
+
+    def test_daily_history_keeps_one_point_per_session(self):
+        x=run(self.state(),'2026-11-27 10:07');y=run(x,'2026-11-27 10:31')
+        self.assertEqual([p['date'] for p in y['equity_history']],['2026-11-25','2026-11-27'])
+        self.assertEqual(y['equity_history'][-1]['equity'],y['intraday_equity'][-1]['equity'])
+        f=frame(start='2026-11-30 09:30')
+        z=run(y,'2026-11-30 10:07',f,a=[])
+        self.assertEqual(z['equity_history'][:2],y['equity_history'])
+        self.assertEqual(z['equity_history'][-1]['date'],'2026-11-30')
